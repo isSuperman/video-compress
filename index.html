@@ -46,6 +46,12 @@
     --inset-2:rgba(255,255,255,.07);
     --sunken:rgba(0,0,0,.30);            /* 凹陷容器（滑块槽等） */
     --card-hi:rgba(255,255,255,.07);     /* 卡片顶部高光 */
+    /* 选择区专用：深色下用淡渐变玻璃，浅色下用接近实底的白 */
+    --drop-a:rgba(63,216,255,.075);
+    --drop-b:rgba(157,107,255,.055);
+    --drop-c:rgba(255,255,255,.022);
+    --drop-sheen:rgba(255,255,255,.07);
+    --drop-shadow:rgba(0,0,0,.9);
     --card-lo:rgba(0,0,0,.22);           /* 卡片底部阴影 */
     --shadow:rgba(0,0,0,.95);
 
@@ -94,6 +100,13 @@
 
       --h1-a:#0b0d13; --h1-b:#1b3a6b; --h1-c:#2f7fd6; --h1-d:#6a4bd8;
       --h1-glow:rgba(80,140,230,.22);
+
+      /* 浅色下选择区必须够实，否则底纹透上来会很乱 */
+      --drop-a:rgba(214,232,252,.98);
+      --drop-b:rgba(226,222,250,.98);
+      --drop-c:rgba(252,253,255,.99);
+      --drop-sheen:rgba(255,255,255,.16);
+      --drop-shadow:rgba(30,45,80,.12);
     }
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -176,17 +189,21 @@
     border-radius:var(--r-lg);
     padding:34px 18px 30px;
     text-align:center;cursor:pointer;
-    background:linear-gradient(168deg,rgba(63,216,255,.075),rgba(157,107,255,.055) 58%,var(--grid));
-    backdrop-filter:blur(24px) saturate(180%);
-    -webkit-backdrop-filter:blur(24px) saturate(180%);
-    box-shadow:0 1px 0 var(--inset-2) inset, 0 16px 40px -24px rgba(0,0,0,.9);
+    background:linear-gradient(168deg,var(--drop-a),var(--drop-b) 58%,var(--drop-c));
+    backdrop-filter:blur(28px) saturate(170%);
+    -webkit-backdrop-filter:blur(28px) saturate(170%);
+    box-shadow:
+      0 1px 0 var(--card-hi) inset,
+      0 -1px 0 var(--card-lo) inset,
+      0 16px 40px -24px var(--drop-shadow);
     transition:transform .18s cubic-bezier(.22,.9,.28,1), border-color .2s, box-shadow .2s;
     margin-bottom:13px;
   }
   .drop::after{
     content:"";position:absolute;top:-60%;left:-30%;width:60%;height:220%;
-    background:linear-gradient(105deg,transparent,var(--inset-2),transparent);
+    background:linear-gradient(105deg,transparent,var(--drop-sheen),transparent);
     transform:rotate(14deg);pointer-events:none;
+    opacity:.7;
   }
   .drop:active{transform:scale(.982)}
   /* 选好文件后收起，给下方卡片让出空间。
