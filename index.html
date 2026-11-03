@@ -376,6 +376,10 @@ function showCard(id){
 function hideCard(id){
   $(id).classList.add('hide');
 }
+// 进度区不是 .card，单独显隐
+function barWrapShow(){
+  $('barWrap').classList.remove('hide');
+}
 
 /* ---------- 环境检测 ---------- */
 const HAS_WC = typeof VideoEncoder !== 'undefined' && typeof VideoDecoder !== 'undefined';
