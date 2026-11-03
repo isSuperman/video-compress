@@ -6,6 +6,19 @@
 <meta name="theme-color" content="#05060a">
 <meta name="color-scheme" content="dark">
 <title>MC作业专用</title>
+
+<!-- 图标：Safari 优先用 SVG（透明背景，任意尺寸清晰） -->
+<link rel="icon" type="image/svg+xml" href="./favicon.svg">
+<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png">
+
+<!-- 添加到主屏幕：以独立应用方式启动，全屏无 Safari 界面 -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MC作业">
+<meta name="application-name" content="MC作业">
+<meta name="format-detection" content="telephone=no">
 <style>
   :root{
     --bg:#05060a;
@@ -27,6 +40,10 @@
     --r-sm:12px;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  /* 添加到主屏幕后按独立应用运行：禁用橡皮筋回弹与文字选中 */
+  html{overscroll-behavior:none}
+  body{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+  input,textarea{-webkit-user-select:auto;user-select:auto}
   html{-webkit-text-size-adjust:100%}
   body{
     margin:0 auto;max-width:600px;
@@ -35,7 +52,7 @@
     font:15px/1.55 -apple-system,BlinkMacSystemFont,"SF Pro SC","PingFang SC",sans-serif;
     letter-spacing:.005em;
     -webkit-font-smoothing:antialiased;
-    overflow-x:hidden;position:relative;min-height:100vh;
+    overflow-x:hidden;position:relative;min-height:100vh;min-height:-webkit-fill-available;
   }
   /* ── 背景光晕 ── */
   body::before{
