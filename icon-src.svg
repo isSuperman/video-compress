@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#161d33"/>
+      <stop offset="50%" stop-color="#0d1020"/>
+      <stop offset="100%" stop-color="#090a14"/>
+    </linearGradient>
+    <linearGradient id="fg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#3fd8ff"/>
+      <stop offset="48%" stop-color="#4f7cff"/>
+      <stop offset="100%" stop-color="#a97dff"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.6">
+      <stop offset="0%" stop-color="#4f7cff" stop-opacity="0.28"/>
+      <stop offset="60%" stop-color="#6f5cff" stop-opacity="0.09"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="soft" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="20"/>
+    </filter>
+  </defs>
+
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <rect width="1024" height="1024" fill="url(#glow)"/>
+
+  <!-- 主体：水平垂直居中，留出安全边距 -->
+  <g transform="translate(512 512) scale(0.82) translate(-512 -512)">
+    <g filter="url(#soft)" opacity="0.5">
+      <rect x="236" y="330" width="380" height="356" rx="84" fill="url(#fg)"/>
+      <path d="M656 424 L790 360 Q820 346 820 380 L820 636 Q820 670 790 656 L656 592 Z" fill="url(#fg)"/>
+    </g>
+
+    <rect x="236" y="330" width="380" height="356" rx="84" fill="url(#fg)"/>
+    <path d="M656 424 L790 360 Q820 346 820 380 L820 636 Q820 670 790 656 L656 592 Z" fill="url(#fg)"/>
+
+    <!-- 压缩符号：向中心收拢的三条竖线 -->
+    <g stroke="#0b0f1c" stroke-width="34" stroke-linecap="round">
+      <path d="M352 458 L352 566"/>
+      <path d="M426 432 L426 592"/>
+      <path d="M500 458 L500 566"/>
+    </g>
+  </g>
+</svg>

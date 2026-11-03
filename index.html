@@ -398,6 +398,33 @@
     font-variant-numeric:tabular-nums;cursor:pointer;
     transition:background .15s;
   }
+  /* ── 署名 ── */
+  .sign{
+    display:flex;align-items:center;justify-content:center;gap:11px;
+    margin-top:20px;letter-spacing:.04em;
+  }
+  .signLine{
+    flex:0 1 42px;height:1px;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.13));
+  }
+  .signLine:last-child{
+    background:linear-gradient(90deg,rgba(255,255,255,.13),transparent);
+  }
+  .signText{
+    font-size:11px;color:var(--dimmer);white-space:nowrap;
+    letter-spacing:.05em;
+  }
+  .signText b{
+    color:var(--text);font-weight:650;letter-spacing:.03em;
+    background:linear-gradient(96deg,#7ec8ff,#a98bff);
+    -webkit-background-clip:text;background-clip:text;
+    -webkit-text-fill-color:transparent;color:transparent;
+  }
+  .heart{
+    color:#ff5f7a;font-size:10.5px;
+    filter:drop-shadow(0 0 6px rgba(255,95,122,.55));
+    display:inline-block;transform:translateY(-.5px);
+  }
   .ver:active{background:rgba(255,255,255,.09)}
   .verDot{
     width:5px;height:5px;border-radius:50%;background:var(--dimmer);
@@ -540,6 +567,13 @@
 <footer>
   基于 <b>mediabunny</b> + <b>WebCodecs</b><br>
   需要 iOS 16.4+ / Chrome 94+ 等支持 WebCodecs 的浏览器
+
+  <div class="sign">
+    <span class="signLine"></span>
+    <span class="signText">Crafted with <span class="heart">♥</span> by <b>MC'dady</b></span>
+    <span class="signLine"></span>
+  </div>
+
   <div class="ver" id="verLine">
     <span class="verDot" id="verDot"></span>
     <span id="verText">检查版本中…</span>
