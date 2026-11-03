@@ -11,6 +11,7 @@
 <link rel="icon" type="image/svg+xml" href="./favicon.svg">
 <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
 <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png">
+<link rel="mask-icon" href="./favicon.svg" color="#4f7cff">
 
 <!-- 添加到主屏幕：以独立应用方式启动，全屏无 Safari 界面 -->
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -668,13 +669,67 @@ const APP_VERSION = (() => {
 
 /* ---------- 卡片显示 ---------- */
 // 不使用 opacity 过渡（见 CSS 注释），直接切换显隐，保证任何环境下都可见。
+// 卡片显隐。
+// 不能用 opacity 过渡：本环境（iOS WebView）里 transition 常卡在初始帧。
+// 改为固定高度 + 透明度，用 Web Animations API 播放，结束时再落到最终态，
+// 即使动画不推进也能正确收尾（finish 会强制跳到末帧）。
 function showCard(id){
   const el = $(id);
   el.classList.remove('hide');
   el.classList.remove('enter');
+  // 入场动画用 Web Animations（fill:none，不推进也不会残留透明态）
+  if (el.animate && !el.classList.contains('noAnim')) {
+    try {
+      const a = el.animate(
+        [
+          { opacity: 0, transform: 'translateY(8px)' },
+          { opacity: 1, transform: 'none' }
+        ],
+        { duration: 260, easing: 'cubic-bezier(.22,.9,.28,1)', fill: 'none' }
+      );
+      a.onfinish = () => { el.style.opacity = ''; el.style.transform = ''; };
+      setTimeout(() => { try { a.finish(); } catch (e) {} }, 400);
+    } catch (e) {}
+  }
 }
-function hideCard(id){
-  $(id).classList.add('hide');
+
+function hideCard(id, animate = true){
+  const el = $(id);
+  if (!animate || !el.animate || el.classList.contains('hide')) {
+    el.classList.add('hide');
+    return;
+  }
+  // 先测量当前高度，做成折叠动画，让下方内容平滑上移
+  const h = el.offsetHeight;
+  el.style.height = h + 'px';
+  el.style.overflow = 'hidden';
+  el.style.marginBottom = getComputedStyle(el).marginBottom;
+  el.classList.add('noAnim');
+
+  try {
+    const a = el.animate(
+      [
+        { height: h + 'px', opacity: 1, marginBottom: getComputedStyle(el).marginBottom },
+        { height: '0px', opacity: 0, marginBottom: '0px' }
+      ],
+      { duration: 240, easing: 'cubic-bezier(.4,0,.2,1)', fill: 'none' }
+    );
+    const done = () => {
+      el.classList.add('hide');
+      el.style.cssText = el.style.cssText
+        .replace(/height:[^;]*;?/g, '')
+        .replace(/overflow:[^;]*;?/g, '')
+        .replace(/margin-bottom:[^;]*;?/g, '');
+      el.classList.remove('noAnim');
+    };
+    a.onfinish = done;
+    // 兜底：动画若未推进，450ms 后强制收尾
+    setTimeout(() => { if (!el.classList.contains('hide')) done(); }, 450);
+  } catch (e) {
+    el.classList.add('hide');
+    el.style.cssText = '';
+    el.classList.remove('noAnim');
+  }
 }
 // 进度区不是 .card，单独显隐
 // 一体化按钮的三种状态：可用 / 进行中 / 不可用
@@ -943,12 +998,20 @@ async function startConvert() {
 
     // 耗时放在成果栏
     $('rTime').textContent = `用时 ${elapsed.toFixed(1)} 秒`;
-    hideCard('infoCard');
-
-    // 完成后隐藏状态提示
     $('status').textContent = '';
 
+    // 交接顺序：结果卡先入场（在源文件卡下方），随后源文件卡折叠收起，
+    // 视觉上像结果"接替"了输入区，而不是凭空跳变。
     showCard('resultCard');
+    // 注意：本环境 requestAnimationFrame 不触发，只能用定时器
+    setTimeout(() => {
+      hideCard('infoCard');
+      setTimeout(() => {
+        try {
+          $('resultCard').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        } catch (e) {}
+      }, 240);
+    }, 120);
   } catch (e) {
     console.error(e);
     setBtnState('idle', '重新压缩');
