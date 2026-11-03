@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0e0e10">
+<title>视频压缩 · 本地硬件编码</title>
+<style>
+  :root {
+    --bg:#0e0e10; --card:#1a1a1e; --line:#2c2c32; --text:#ececf1;
+    --dim:#8e8e98; --accent:#4f8cff; --ok:#35c759; --warn:#ff9f0a; --err:#ff453a;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{
+    margin:0;padding:20px 16px 48px;background:var(--bg);color:var(--text);
+    font:15px/1.55 -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;
+    max-width:640px;margin:0 auto;
+  }
+  h1{font-size:21px;margin:0 0 4px;font-weight:650;letter-spacing:-.01em}
+  .sub{color:var(--dim);font-size:13px;margin-bottom:22px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+  .drop{
+    border:2px dashed var(--line);border-radius:14px;padding:36px 16px;
+    text-align:center;cursor:pointer;transition:.18s;background:var(--card);
+  }
+  .drop:active,.drop.over{border-color:var(--accent);background:#1c2333}
+  .drop .icon{font-size:32px;margin-bottom:10px}
+  .drop .hint{color:var(--dim);font-size:13px;margin-top:3px}
+  input[type=file]{display:none}
+  .label{font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;
+         margin-bottom:10px;font-weight:600}
+  .opts{display:flex;gap:8px;flex-wrap:wrap}
+  .opt{
+    flex:1;min-width:84px;padding:11px 8px;border-radius:10px;
+    border:1px solid var(--line);background:transparent;color:var(--text);
+    font-size:13px;cursor:pointer;text-align:center;transition:.15s;font-family:inherit;
+  }
+  .opt.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+  .opt small{display:block;font-size:11px;opacity:.72;margin-top:2px}
+  .meta{font-size:13px;color:var(--dim);line-height:1.75;word-break:break-all}
+  .meta b{color:var(--text);font-weight:550}
+  button.primary{
+    width:100%;padding:15px;border:none;border-radius:12px;background:var(--accent);
+    color:#fff;font-size:16px;font-weight:600;cursor:pointer;font-family:inherit;
+  }
+  button.primary:disabled{background:#33333c;color:#66666f}
+  button.ghost{
+    width:100%;padding:13px;border:1px solid var(--line);border-radius:12px;
+    background:transparent;color:var(--text);font-size:15px;cursor:pointer;
+    font-family:inherit;margin-top:8px;
+  }
+  .bar{height:6px;background:#26262c;border-radius:3px;overflow:hidden;margin:13px 0 9px}
+  .bar>i{display:block;height:100%;width:0;background:var(--accent);border-radius:3px;transition:width .18s}
+  .status{font-size:13px;color:var(--dim);text-align:center;min-height:20px}
+  .status.ok{color:var(--ok)} .status.err{color:var(--err)}
+  video{width:100%;border-radius:10px;background:#000;margin-top:10px;display:block}
+  .note{font-size:12.5px;color:var(--warn);margin-top:10px;line-height:1.55}
+  .note:empty{display:none}
+  .hide{display:none!important}
+  .cmp{display:flex;gap:10px;margin-top:12px}
+  .cmp>div{flex:1;text-align:center;font-size:12px;color:var(--dim)}
+  .cmp b{display:block;font-size:19px;color:var(--text);font-weight:600;margin-bottom:2px}
+  .cmp .good b{color:var(--ok)}
+  .save{font-size:11.5px;color:var(--dim);text-align:center;margin-top:9px;line-height:1.6}
+  footer{text-align:center;font-size:11.5px;color:#55555e;margin-top:26px;line-height:1.7}
+</style>
+</head>
+<body>
+
+<h1>视频压缩</h1>
+<div class="sub">本地硬件编码 · 文件不会上传到任何服务器</div>
+
+<div class="drop" id="drop">
+  <div class="icon">📹</div>
+  <div><b>选择视频</b></div>
+  <div class="hint">或把文件拖进来 · MP4 / MOV / WebM</div>
+  <input type="file" id="file" accept="video/*">
+</div>
+
+<div class="card hide" id="infoCard">
+  <div class="label">源文件</div>
+  <div class="meta" id="meta"></div>
+  <div class="note" id="srcWarn"></div>
+</div>
+
+<div class="card hide" id="optCard">
+  <div class="label">输出分辨率</div>
+  <div class="opts" id="resOpts">
+    <button class="opt on" data-res="1080">1080p<small>原画质</small></button>
+    <button class="opt" data-res="720">720p<small>省流量</small></button>
+    <button class="opt" data-res="480">480p<small>更小</small></button>
+  </div>
+  <div style="height:16px"></div>
+  <div class="label">画质档位</div>
+  <div class="opts" id="qOpts">
+    <button class="opt" data-q="8">高<small>8 Mbps</small></button>
+    <button class="opt on" data-q="4">标准<small>4 Mbps</small></button>
+    <button class="opt" data-q="2">小<small>2 Mbps</small></button>
+  </div>
+  <div class="note" id="codecWarn"></div>
+</div>
+
+<div class="card hide" id="runCard">
+  <button class="primary" id="start">开始压缩</button>
+  <div class="hide" id="barWrap">
+    <div class="bar"><i id="bar"></i></div>
+    <div class="status" id="status"></div>
+  </div>
+</div>
+
+<div class="card hide" id="resultCard">
+  <div class="label">压缩完成</div>
+  <div class="cmp">
+    <div><b id="rOrig">—</b>原始</div>
+    <div class="good"><b id="rNew">—</b>压缩后</div>
+    <div><b id="rSave">—</b>节省</div>
+  </div>
+  <div class="meta" id="result" style="margin-top:12px"></div>
+  <video id="preview" controls playsinline></video>
+  <button class="primary" id="download" style="margin-top:12px">保存视频</button>
+  <div class="save" id="saveHint"></div>
+  <button class="ghost" id="again">处理另一个视频</button>
+</div>
+
+<footer>
+  基于 mediabunny + WebCodecs<br>
+  需要 iOS 16.4+ / Chrome 94+ 等支持 WebCodecs 的浏览器
+</footer>
+
+<script src="./lib/mediabunny.bundle.js"></script>
+<script>
+const mb = window.Mediabunny;
+const $ = id => document.getElementById(id);
+
+let srcFile = null, srcInfo = null, lastBlob = null, lastName = '';
+let selRes = 1080, selQ = 4;
+
+/* ---------- 环境检测 ---------- */
+const HAS_WC = typeof VideoEncoder !== 'undefined' && typeof VideoDecoder !== 'undefined';
+
+/* ---------- 文件选择 ---------- */
+const drop = $('drop'), fileInput = $('file');
+drop.addEventListener('click', () => fileInput.click());
+['dragover','dragenter'].forEach(e => drop.addEventListener(e, ev => {
+  ev.preventDefault(); drop.classList.add('over');
+}));
+['dragleave','drop'].forEach(e => drop.addEventListener(e, ev => {
+  ev.preventDefault(); drop.classList.remove('over');
+}));
+drop.addEventListener('drop', ev => {
+  const f = ev.dataTransfer.files[0];
+  if (f) loadFile(f);
+});
+fileInput.addEventListener('change', e => {
+  const f = e.target.files[0];
+  if (f) loadFile(f);
+});
+
+function fmtTime(s) {
+  const m = Math.floor(s/60), sec = Math.floor(s%60);
+  return `${m}:${String(sec).padStart(2,'0')}`;
+}
+function mbStr(bytes) {
+  return (bytes/1048576).toFixed(bytes > 10485760 ? 1 : 2) + ' MB';
+}
+
+async function loadFile(f) {
+  srcFile = f;
+  lastBlob = null;
+  $('resultCard').classList.add('hide');
+  $('runCard').classList.remove('hide');
+  $('barWrap').classList.add('hide');
+  $('status').textContent = '';
+  $('status').className = 'status';
+  $('srcWarn').textContent = '';
+  $('codecWarn').textContent = '';
+  $('start').disabled = true;
+
+  if (!HAS_WC) {
+    $('meta').textContent = '';
+    $('infoCard').classList.remove('hide');
+    $('srcWarn').textContent =
+      '当前浏览器不支持 WebCodecs，无法进行硬件编码。请使用 Safari（iOS 16.4+）或其他新版浏览器打开。';
+    return;
+  }
+
+  try {
+    const input = new mb.Input({
+      formats: mb.ALL_FORMATS,
+      source: new mb.BlobSource(f)
+    });
+    const vTrack = await input.getPrimaryVideoTrack();
+    const aTrack = await input.getPrimaryAudioTrack();
+
+    if (!vTrack) throw new Error('文件中没有找到视频轨道');
+
+    srcInfo = {
+      input, vTrack, aTrack,
+      width: vTrack.displayWidth || vTrack.codedWidth,
+      height: vTrack.displayHeight || vTrack.codedHeight,
+      duration: await input.computeDuration(),
+      hasAudio: !!aTrack,
+      codec: vTrack.codec
+    };
+
+    // mediabunny 的 displayWidth / displayHeight 已经应用了旋转矩阵
+    // （例如 iPhone 竖屏视频：coded 1920×1080 + rotation 90 → display 1080×1920），
+    // 所以直接用 display 尺寸，不需要自己再对调，否则方向反而会错。
+    srcInfo.displayW = srcInfo.width;
+    srcInfo.displayH = srcInfo.height;
+
+    $('meta').innerHTML =
+      `<b>${f.name}</b><br>` +
+      `${srcInfo.displayW} × ${srcInfo.displayH} · ${fmtTime(srcInfo.duration)} · ${mbStr(f.size)}<br>` +
+      `编码 <b>${String(srcInfo.codec || '未知').toUpperCase()}</b>` +
+      (srcInfo.hasAudio ? ' · 含音轨' : ' · <b>无音轨</b>');
+
+    $('infoCard').classList.remove('hide');
+    $('optCard').classList.remove('hide');
+
+    if (!srcInfo.hasAudio) {
+      $('srcWarn').textContent = '该视频没有音轨，压缩后的文件也不会有声音。';
+    }
+
+    // 预检：确认源编码可解码
+    const testOutput = new mb.Output({
+      format: new mb.Mp4OutputFormat(),
+      target: new mb.BufferTarget()
+    });
+    const probe = await mb.Conversion.init({
+      input, output: testOutput,
+      video: { codec: 'avc', bitrate: 2500000 },
+      audio: srcInfo.hasAudio
+        ? { codec: 'aac', bitrate: 128000 }
+        : { discard: true }
+    });
+    const dropped = (probe.discardedTracks || [])
+      .filter(t => t.reason !== 'discarded_by_user');
+    if (!probe.isValid || dropped.length) {
+      const why = dropped.map(t => t.reason).join(', ') || '配置无效';
+      $('srcWarn').textContent =
+        `此视频的编码（${String(srcInfo.codec).toUpperCase()}）无法被浏览器直接解码（${why}）。` +
+        `请换用手机原始拍摄的视频，或先用其他工具转成 H.264 / HEVC 再试。`;
+      return;
+    }
+
+    $('start').disabled = false;
+  } catch (e) {
+    console.error(e);
+    $('meta').textContent = '';
+    $('infoCard').classList.remove('hide');
+    $('srcWarn').textContent = '读取失败：' + e.message;
+  }
+}
+
+/* ---------- 选项 ---------- */
+$('resOpts').addEventListener('click', e => {
+  const b = e.target.closest('.opt'); if (!b) return;
+  [...$('resOpts').children].forEach(x => x.classList.remove('on'));
+  b.classList.add('on'); selRes = +b.dataset.res;
+});
+$('qOpts').addEventListener('click', e => {
+  const b = e.target.closest('.opt'); if (!b) return;
+  [...$('qOpts').children].forEach(x => x.classList.remove('on'));
+  b.classList.add('on'); selQ = +b.dataset.q;
+});
+
+/* ---------- 计算目标尺寸 ---------- */
+// displayW/H 已带旋转（竖屏是 1080×1920），但 mediabunny 的 width/height 参数
+// 作用于 coded 尺寸，所以这里按 coded 尺寸比例缩放，再按显示方向返回。
+function targetSize(w, h, maxDim) {
+  const longSide = Math.max(w, h);
+  const scale = Math.min(1, maxDim / longSide);
+  return [
+    Math.max(2, Math.round(w * scale / 2) * 2),
+    Math.max(2, Math.round(h * scale / 2) * 2)
+  ];
+}
+
+/* ---------- 开始压缩 ---------- */
+$('start').addEventListener('click', async () => {
+  if (!srcFile || !srcInfo) return;
+
+  const btn = $('start');
+  btn.disabled = true;
+  $('barWrap').classList.remove('hide');
+  $('bar').style.width = '0%';
+  $('status').className = 'status';
+  $('status').textContent = '准备中…';
+
+  try {
+    // 缩放基准用「短边」判断清晰度档位：1080p 指短边 1080。
+    // 竖屏 1080×1920 与横屏 1920×1080 都应落在 1080p 档，不被缩小。
+    const shortSide = Math.min(srcInfo.displayW, srcInfo.displayH);
+    const scale = Math.min(1, selRes / shortSide);
+    const tw = Math.max(2, Math.round(srcInfo.displayW * scale / 2) * 2);
+    const th = Math.max(2, Math.round(srcInfo.displayH * scale / 2) * 2);
+
+    // 码率按实际像素数缩放（以 1080p 为基准）
+    const ratio = Math.max(0.3, (tw * th) / (1920 * 1080));
+    const bitrate = Math.round(selQ * 1e6 * ratio);
+
+    const output = new mb.Output({
+      format: new mb.Mp4OutputFormat(),
+      target: new mb.BufferTarget()
+    });
+
+    const conversion = await mb.Conversion.init({
+      input: srcInfo.input,
+      output,
+      video: {
+        width: tw, height: th,
+        fit: 'contain',
+        codec: 'avc',
+        bitrate,
+        keyFrameInterval: 2,
+        // 关键：allowRotationMetadata 让 mediabunny 用旋转标记表达方向，
+        // 而不是把像素转置。否则竖屏视频会被压成横屏或尺寸错乱。
+        allowRotationMetadata: true,
+        hardwareAcceleration: 'prefer-hardware'
+      },
+      audio: srcInfo.hasAudio
+        ? { codec: 'aac', bitrate: 128000, numberOfChannels: 2, sampleRate: 48000 }
+        : { discard: true }
+    });
+
+    if (!conversion.isValid) {
+      const why = (conversion.discardedTracks || []).map(t => t.reason).join(', ');
+      throw new Error('无法配置此转换：' + (why || '未知原因'));
+    }
+
+    conversion.onProgress = p => {
+      const pct = Math.min(100, Math.round(p * 100));
+      $('bar').style.width = pct + '%';
+      $('status').textContent = `压缩中… ${pct}%`;
+    };
+
+    const t0 = performance.now();
+    await conversion.execute();
+    const elapsed = (performance.now() - t0) / 1000;
+
+    const buf = output.target.buffer;
+    if (!buf || !buf.byteLength) throw new Error('输出为空，编码可能失败');
+
+    lastBlob = new Blob([buf], { type: 'video/mp4' });
+    lastName = srcFile.name.replace(/\.[^.]+$/, '') + '_compressed.mp4';
+
+    const saved = Math.round((1 - lastBlob.size / srcFile.size) * 100);
+
+    $('bar').style.width = '100%';
+    $('status').className = 'status ok';
+    $('status').textContent = `完成 · 用时 ${elapsed.toFixed(1)} 秒`;
+
+    $('rOrig').textContent = mbStr(srcFile.size);
+    $('rNew').textContent = mbStr(lastBlob.size);
+    $('rSave').textContent = saved > 0 ? saved + '%' : '—';
+
+    $('result').innerHTML =
+      `H.264 编码 · ${tw} × ${th} · ${(bitrate/1e6).toFixed(1)} Mbps · AAC 128k` +
+      (saved <= 0
+        ? '<br><b style="color:var(--warn)">原视频已高度压缩，再压体积反而变大。建议直接用原文件。</b>'
+        : '');
+
+    const url = URL.createObjectURL(lastBlob);
+    $('preview').src = url;
+
+    $('resultCard').classList.remove('hide');
+  } catch (e) {
+    console.error(e);
+    $('status').className = 'status err';
+    $('status').textContent = '失败：' + (e && e.message ? e.message : String(e));
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+/* ---------- 保存 ---------- */
+$('download').addEventListener('click', () => {
+  if (!lastBlob) return;
+  const url = URL.createObjectURL(lastBlob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = lastName;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+
+  $('saveHint').textContent =
+    '如果没自动保存，长按上方视频选择「存储到照片」。';
+});
+
+/* ---------- 重置 ---------- */
+$('again').addEventListener('click', () => {
+  srcFile = srcInfo = lastBlob = null;
+  fileInput.value = '';
+  $('preview').src = '';
+  $('infoCard').classList.add('hide');
+  $('optCard').classList.add('hide');
+  $('resultCard').classList.add('hide');
+  $('runCard').classList.add('hide');
+  $('saveHint').textContent = '';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+</script>
+</body>
+</html>
