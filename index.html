@@ -269,6 +269,26 @@
     margin-top:30px;line-height:1.85;letter-spacing:.02em;
   }
   footer b{color:var(--dim);font-weight:600}
+  .ver{
+    display:inline-flex;align-items:center;gap:6px;
+    margin-top:14px;padding:5px 12px;border-radius:99px;
+    background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.07);
+    font-size:10.5px;letter-spacing:.03em;color:var(--dimmer);
+    font-variant-numeric:tabular-nums;cursor:pointer;
+    transition:background .15s;
+  }
+  .ver:active{background:rgba(255,255,255,.09)}
+  .verDot{
+    width:5px;height:5px;border-radius:50%;background:var(--dimmer);
+    box-shadow:0 0 7px 1px rgba(138,144,163,.5);flex:0 0 auto;
+  }
+  .ver.ok{color:var(--dim);border-color:rgba(46,230,168,.22)}
+  .ver.ok .verDot{background:var(--ok);box-shadow:0 0 8px 1.5px rgba(46,230,168,.65)}
+  .ver.stale{color:var(--warn);border-color:rgba(255,179,64,.3)}
+  .ver.stale .verDot{background:var(--warn);box-shadow:0 0 8px 1.5px rgba(255,179,64,.65)}
+  .ver.err{color:var(--err);border-color:rgba(255,84,112,.28)}
+  .ver.err .verDot{background:var(--err);box-shadow:0 0 8px 1.5px rgba(255,84,112,.6)}
 </style>
 </head>
 <body>
@@ -356,6 +376,10 @@
 <footer>
   基于 <b>mediabunny</b> + <b>WebCodecs</b><br>
   需要 iOS 16.4+ / Chrome 94+ 等支持 WebCodecs 的浏览器
+  <div class="ver" id="verLine">
+    <span class="verDot" id="verDot"></span>
+    <span id="verText">检查版本中…</span>
+  </div>
 </footer>
 
 <script src="./lib/mediabunny.bundle.js"></script>
@@ -365,6 +389,64 @@ const $ = id => document.getElementById(id);
 
 let srcFile = null, srcInfo = null, lastBlob = null, lastName = '';
 let selRes = 1080, selQ = 4;
+
+/* ---------- 版本号 ---------- */
+// 读取 version.json（构建时由 build.sh 生成）。
+// 顺便对比缓存版本：如果服务器版本比当前页面新，说明有未刷新的更新。
+const APP_VERSION = (() => {
+  const el = document.getElementById('verText');
+  const box = document.getElementById('verLine');
+  let current = null;
+
+  async function fetchVersion(bust) {
+    const url = './version.json' + (bust ? '?t=' + Date.now() : '');
+    const r = await fetch(url, bust ? { cache: 'no-store' } : undefined);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  }
+
+  async function init() {
+    try {
+      const v = await fetchVersion(false);
+      current = v;
+      const when = v.builtAt
+        ? new Date(v.builtAt).toLocaleString('zh-CN', {
+            month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit', hour12: false
+          })
+        : '';
+      el.textContent = `${v.version}${when ? ' · ' + when : ''}`;
+      box.className = 'ver ok';
+      box.title = '点击检查更新';
+    } catch (e) {
+      el.textContent = '版本未知';
+      box.className = 'ver err';
+    }
+  }
+
+  // 点击手动检查更新
+  box.addEventListener('click', async () => {
+    el.textContent = '检查中…';
+    box.className = 'ver';
+    try {
+      const v = await fetchVersion(true);
+      if (current && v.version !== current.version) {
+        el.textContent = `有新版本 ${v.version} · 点击刷新`;
+        box.className = 'ver stale';
+        box.onclick = () => location.reload(true);
+        return;
+      }
+      el.textContent = `${v.version} · 已是最新`;
+      box.className = 'ver ok';
+    } catch (e) {
+      el.textContent = '连接失败';
+      box.className = 'ver err';
+    }
+  });
+
+  init();
+  return { get current() { return current; } };
+})();
 
 /* ---------- 卡片显示 ---------- */
 // 不使用 opacity 过渡（见 CSS 注释），直接切换显隐，保证任何环境下都可见。

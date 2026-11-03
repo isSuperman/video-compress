@@ -2,3 +2,4 @@ node_modules/
 .DS_Store
 *.mov
 *.mp4
+version.json

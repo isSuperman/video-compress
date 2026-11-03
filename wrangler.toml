@@ -1,7 +1,7 @@
 name = "video-compress"
 pages_build_output_dir = "."
 
-# 纯静态站点，无需构建步骤。
-# 部署方式二选一：
-#   1. Cloudflare Pages 连 Git 仓库，构建命令留空，输出目录填 /
-#   2. npx wrangler pages deploy .
+# 纯静态站点。
+# 构建命令 sh build.sh 只做一件事：写入 version.json（commit 短哈希 + 构建时间），
+# 让页脚能显示当前部署版本，方便确认是否刷到了新版。
+# 在 Cloudflare Pages 控制台里，构建命令填：sh build.sh   输出目录填：/
