@@ -253,44 +253,40 @@
   }
   .status{font-size:12.5px;color:var(--dim);text-align:center;min-height:19px;font-variant-numeric:tabular-nums}
 
-  /* ── 结果：紧凑布局 ── */
-  .resTop{display:flex;gap:13px;align-items:center}
-  .thumb{
-    flex:0 0 92px;width:92px;height:92px;border-radius:14px;
-    overflow:hidden;position:relative;
-    background:linear-gradient(150deg,rgba(63,216,255,.14),rgba(157,107,255,.1));
-    border:1px solid rgba(255,255,255,.12);
-    box-shadow:0 1px 0 rgba(255,255,255,.1) inset, 0 8px 22px -12px #000;
-    cursor:pointer;
+  /* ── 结果 ── */
+  .divider{
+    height:1px;margin:15px 0;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.09) 18%,rgba(255,255,255,.09) 82%,transparent);
   }
-  .thumb video{width:100%;height:100%;object-fit:cover;display:block;background:#000}
-  .thumb .play{
-    position:absolute;inset:0;display:grid;place-items:center;
-    background:linear-gradient(0deg,rgba(0,0,0,.45),transparent 60%);pointer-events:none;
+  .resTop{
+    display:flex;align-items:center;gap:9px;margin-bottom:14px;flex-wrap:wrap;
   }
-  .thumb .play i{
-    width:30px;height:30px;border-radius:50%;display:grid;place-items:center;
-    background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.35);
-    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  .resTime{
+    font-size:11.5px;color:var(--dimmer);
+    font-variant-numeric:tabular-nums;letter-spacing:.02em;
   }
-  .thumb .play i::after{
-    content:"";border-left:8px solid #fff;border-top:5.5px solid transparent;
-    border-bottom:5.5px solid transparent;margin-left:2.5px;
-  }
-  .resStats{flex:1;min-width:0}
-  .resStats .saveTag{
+  .saveTag{
     display:inline-flex;align-items:center;gap:5px;
-    font-size:11px;font-weight:700;letter-spacing:.06em;
+    font-size:11px;font-weight:700;letter-spacing:.05em;
     color:#052018;background:linear-gradient(96deg,#2ee6a8,#3fd8ff);
-    padding:2.5px 9px;border-radius:99px;margin-bottom:7px;
+    padding:3px 10px;border-radius:99px;
   }
-  .resStats .row{display:flex;gap:16px;margin-top:2px}
-  .resStats .row>div{font-size:10.5px;color:var(--dim);letter-spacing:.04em}
-  .resStats .row b{
-    display:block;font-size:17px;font-weight:680;color:var(--text);
-    letter-spacing:-.015em;font-variant-numeric:tabular-nums;margin-bottom:1px;
+  .row{display:flex;gap:8px}
+  .row>div{
+    flex:1;padding:11px 6px;border-radius:13px;text-align:center;
+    background:rgba(255,255,255,.032);
+    border:1px solid rgba(255,255,255,.06);
+    font-size:10.5px;color:var(--dim);letter-spacing:.04em;
   }
-  .resStats .row .new b{color:var(--ok)}
+  .row b{
+    display:block;font-size:16.5px;font-weight:680;color:var(--text);
+    letter-spacing:-.02em;font-variant-numeric:tabular-nums;margin-bottom:2px;
+  }
+  .row .new{
+    background:rgba(46,230,168,.075);
+    border-color:rgba(46,230,168,.22);
+  }
+  .row .new b{color:var(--ok)}
   .spec{
     font-size:11.5px;color:var(--dim);line-height:1.65;margin-top:11px;
     padding-top:11px;border-top:1px solid rgba(255,255,255,.065);
@@ -401,10 +397,8 @@
   <div class="label">源文件</div>
   <div class="meta" id="meta"></div>
   <div class="note" id="srcWarn"></div>
-</div>
 
-<div class="card hide" id="optCard">
-  <div class="label">输出设置</div>
+  <div class="divider"></div>
 
   <div class="optRow">
     <span class="optKey">分辨率</span>
@@ -441,18 +435,13 @@
 <div class="card hide" id="resultCard">
   <div class="label">压缩完成</div>
   <div class="resTop">
-    <div class="thumb" id="thumb">
-      <video id="preview" playsinline muted preload="metadata"></video>
-      <div class="play"><i></i></div>
-    </div>
-    <div class="resStats">
-      <div class="saveTag" id="saveTag">已压缩</div>
-      <div class="row">
-        <div><b id="rOrig">—</b>原始</div>
-        <div class="new"><b id="rNew">—</b>压缩后</div>
-        <div><b id="rSave">—</b>节省</div>
-      </div>
-    </div>
+    <span class="saveTag" id="saveTag">已压缩</span>
+    <span class="resTime" id="rTime"></span>
+  </div>
+  <div class="row">
+    <div><b id="rOrig">—</b>原始</div>
+    <div class="new"><b id="rNew">—</b>压缩后</div>
+    <div><b id="rSave">—</b>节省</div>
   </div>
   <div class="spec" id="result"></div>
   <button class="primary" id="download" style="margin-top:14px">保存到相册</button>
@@ -642,7 +631,6 @@ async function loadFile(f) {
       (srcInfo.hasAudio ? ' · 含音轨' : ' · <b>无音轨</b>');
 
     showCard('infoCard');
-    showCard('optCard');
 
     if (!srcInfo.hasAudio) {
       $('srcWarn').textContent = '该视频没有音轨，压缩后的文件也不会有声音。';
@@ -710,63 +698,6 @@ function targetSize(w, h, maxDim) {
     Math.max(2, Math.round(w * scale / 2) * 2),
     Math.max(2, Math.round(h * scale / 2) * 2)
   ];
-}
-
-/* ---------- 缩略图点击：全屏预览 ---------- */
-// 不能直接对 #preview 调全屏：生成封面后它被 display:none 隐藏了，
-// iOS 对隐藏的 video 调全屏会静默失败。这里用一个独立的全屏浮层播放。
-$('thumb').addEventListener('click', () => {
-  if (!lastBlob) return;
-  openViewer();
-});
-
-function openViewer() {
-  if (!lastBlob) return;
-
-  const mask = document.createElement('div');
-  mask.className = 'viewer';
-
-  const v = document.createElement('video');
-  v.controls = true;
-  v.playsInline = true;
-  v.autoplay = true;
-  v.src = URL.createObjectURL(lastBlob);
-
-  const close = document.createElement('button');
-  close.className = 'viewerClose';
-  close.textContent = '✕';
-  close.setAttribute('aria-label', '关闭');
-
-  const bar = document.createElement('div');
-  bar.className = 'viewerBar';
-  const saveBtn = document.createElement('button');
-  saveBtn.className = 'viewerSave';
-  saveBtn.textContent = '保存到相册';
-  const name = document.createElement('span');
-  name.className = 'viewerName';
-  name.textContent = lastName;
-  bar.append(name, saveBtn);
-
-  mask.append(v, close, bar);
-  document.body.appendChild(mask);
-  document.body.style.overflow = 'hidden';
-
-  const destroy = () => {
-    try { v.pause(); } catch (e) {}
-    URL.revokeObjectURL(v.src);
-    mask.remove();
-    document.body.style.overflow = '';
-    document.removeEventListener('keydown', onKey);
-  };
-  const onKey = e => { if (e.key === 'Escape') destroy(); };
-
-  close.addEventListener('click', destroy);
-  saveBtn.addEventListener('click', () => { destroy(); saveFile(); });
-  mask.addEventListener('click', e => { if (e.target === mask) destroy(); });
-  document.addEventListener('keydown', onKey);
-
-  // 播放失败时（如自动播放被拦截）仍保留控制条可手动播放
-  v.play().catch(() => {});
 }
 
 /* ---------- 开始压缩 ---------- */
@@ -862,23 +793,11 @@ $('start').addEventListener('click', async () => {
         ? '<br><b style="color:var(--warn)">原视频已高度压缩，再压体积反而变大，建议直接用原文件。</b>'
         : '');
 
-    const url = URL.createObjectURL(lastBlob);
-    const v = $('preview');
-    v.src = url;
-    v.style.display = '';
+    // 耗时放在成果栏
+    $('rTime').textContent = `用时 ${elapsed.toFixed(1)} 秒`;
 
-    // 生成缩略图封面。
-    // iOS Safari 对 Blob 视频常常不触发 loadeddata，导致画面不渲染（纯黑）。
-    // 因此改用两路兜底：
-    //   1) 用 VideoDecoder 从源文件的第一个关键帧抓取（最可靠，不依赖 <video> 渲染）
-    //   2) 退回到 <video> + seek，并在多事件上重试
-    captureThumb().then(img => {
-      if (!img) return;
-      v.style.display = 'none';
-      const old = document.querySelector('.thumbImg');
-      if (old) old.remove();
-      v.parentNode.insertBefore(img, v);
-    });
+    // 压缩完成后收起压缩区，下方「处理另一个视频」足以承担下一步
+    hideCard('runCard');
 
     showCard('resultCard');
   } catch (e) {
@@ -890,108 +809,6 @@ $('start').addEventListener('click', async () => {
     btn.disabled = false;
   }
 });
-
-/* ---------- 生成缩略图封面 ---------- */
-// 用 mediabunny 从源视频解出一帧画到 canvas，返回 <img>。
-// 不依赖 <video> 元素的渲染，避免 iOS 上 Blob 视频不显示画面导致纯黑。
-async function captureThumb() {
-  const SIZE = 184;
-  try {
-    const canvas = document.createElement('canvas');
-    canvas.width = SIZE; canvas.height = SIZE;
-    const ctx = canvas.getContext('2d');
-
-    // 先铺一层深色渐变，即使抓帧失败也不是死黑
-    const bg = ctx.createLinearGradient(0, 0, SIZE, SIZE);
-    bg.addColorStop(0, '#12203a');
-    bg.addColorStop(.55, '#1b1b3a');
-    bg.addColorStop(1, '#2a1b3d');
-    ctx.fillStyle = bg;
-    ctx.fillRect(0, 0, SIZE, SIZE);
-
-    let drew = false;
-    const vTrack = srcInfo && srcInfo.vTrack;
-    if (vTrack) {
-      // 跳到一个非首帧位置，避开部分视频首帧为黑的编码
-      const t = Math.min(0.5, (srcInfo.duration || 1) / 3);
-      const sink = new mb.CanvasSink(vTrack, {
-        fit: 'cover',
-        width: SIZE,
-        height: SIZE
-      });
-      const frame = await sink.getCanvas(t);
-      if (frame && frame.canvas) {
-        ctx.drawImage(frame.canvas, 0, 0, SIZE, SIZE);
-        drew = true;
-      }
-    }
-
-    if (!drew) throw new Error('no frame');
-
-    const img = new Image();
-    img.src = canvas.toDataURL('image/jpeg', 0.85);
-    img.alt = '';
-    img.className = 'thumbImg';
-    img.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block';
-    return img;
-  } catch (e) {
-    // 兜底：退回 <video> 抓帧
-    try {
-      const img = await captureThumbFromVideo();
-      if (img) return img;
-    } catch (e2) {}
-    return null;
-  }
-}
-
-// 兜底方案：<video> seek 后 drawImage，多事件触发重试
-function captureThumbFromVideo() {
-  return new Promise(resolve => {
-    const SIZE = 184;
-    const v = document.createElement('video');
-    v.muted = true; v.playsInline = true; v.preload = 'auto';
-    v.crossOrigin = 'anonymous';
-    let settled = false, tries = 0;
-
-    const finish = ok => {
-      if (settled) return;
-      settled = true;
-      try {
-        if (!ok) return resolve(null);
-        const c = document.createElement('canvas');
-        c.width = SIZE; c.height = SIZE;
-        const ctx = c.getContext('2d');
-        const vw = v.videoWidth, vh = v.videoHeight;
-        if (!vw || !vh) return resolve(null);
-        const s = Math.max(SIZE / vw, SIZE / vh);
-        ctx.drawImage(v, (SIZE - vw * s) / 2, (SIZE - vh * s) / 2, vw * s, vh * s);
-        const img = new Image();
-        img.src = c.toDataURL('image/jpeg', 0.85);
-        img.alt = '';
-        img.className = 'thumbImg';
-        img.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block';
-        resolve(img);
-      } catch (e) { resolve(null); }
-      finally { v.src = ''; }
-    };
-
-    const trySeek = () => {
-      if (settled) return;
-      if (++tries > 6) return finish(false);
-      try { v.currentTime = 0.5 + tries * 0.3; } catch (e) { finish(false); }
-    };
-
-    v.addEventListener('loadeddata', trySeek);
-    v.addEventListener('loadedmetadata', trySeek);
-    v.addEventListener('seeked', () => finish(true));
-    v.addEventListener('canplay', trySeek);
-    v.addEventListener('error', () => finish(false));
-    v.src = URL.createObjectURL(lastBlob);
-
-    // 总超时保护
-    setTimeout(() => finish(false), 4000);
-  });
-}
 
 /* ---------- 保存 ---------- */
 // iOS Safari 不允许网页直接写入相册，唯一合法途径是系统分享面板里的「存储到照片」。
@@ -1039,18 +856,12 @@ $('download').addEventListener('click', saveFile);
 $('again').addEventListener('click', () => {
   srcFile = srcInfo = lastBlob = null;
   fileInput.value = '';
-  const v = $('preview');
-  if (v.src) URL.revokeObjectURL(v.src);
-  v.src = '';
-  v.style.display = '';
-  const old = document.querySelector('.thumbImg');
-  if (old) old.remove();
   hideCard('infoCard');
-  hideCard('optCard');
   hideCard('resultCard');
   hideCard('runCard');
   $('drop').classList.remove('collapsed');
   $('saveHint').textContent = '';
+  $('rTime').textContent = '';
   $('status').style.color = '';
   $('saveTag').style.background = '';
   window.scrollTo({ top: 0, behavior: 'smooth' });
