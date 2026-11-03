@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#05060a">
 <meta name="color-scheme" content="dark">
-<title>视频压缩 · 本地硬件编码</title>
+<title>MC作业专用</title>
 <style>
   :root{
     --bg:#05060a;
@@ -68,7 +68,7 @@
     box-shadow:0 0 10px 2px rgba(63,216,255,.7);
   }
   h1{
-    font-size:30px;line-height:1.14;margin:0 0 8px;font-weight:700;letter-spacing:-.028em;
+    font-size:27px;line-height:1.16;margin:0 0 8px;font-weight:700;letter-spacing:-.025em;
     background:linear-gradient(100deg,#ffffff 0%,#d9ecff 26%,#7ec8ff 56%,#a98bff 84%,#e0b0ff 100%);
     -webkit-background-clip:text;background-clip:text;
     -webkit-text-fill-color:transparent;color:transparent;
@@ -115,6 +115,11 @@
     transform:rotate(14deg);pointer-events:none;
   }
   .drop:active{transform:scale(.982)}
+  /* 选好文件后收起，给下方卡片让出空间。
+     只动 height/opacity，避免布局跳动过大 */
+  .drop.collapsed{
+    display:none;
+  }
   .drop.over{border-color:var(--cyan);box-shadow:0 0 0 1px rgba(63,216,255,.4),0 0 46px -8px rgba(63,216,255,.5) inset}
   .drop .ring{
     width:64px;height:64px;margin:0 auto 16px;border-radius:50%;
@@ -305,7 +310,7 @@
 
 <header>
   <div class="eyebrow">WebCodecs · Local</div>
-  <h1>视频压缩</h1>
+  <h1>MC作业专用</h1>
   <div class="sub">本地硬件编码，文件不会上传到任何服务器</div>
 </header>
 
@@ -368,7 +373,7 @@
     </div>
   </div>
   <div class="spec" id="result"></div>
-  <button class="primary" id="download" style="margin-top:14px">保存视频</button>
+  <button class="primary" id="download" style="margin-top:14px">保存到相册</button>
   <div class="save" id="saveHint"></div>
   <button class="ghost" id="again">处理另一个视频</button>
 </div>
@@ -502,6 +507,8 @@ function mbStr(bytes) {
 
 async function loadFile(f) {
   srcFile = f;
+  // 选中文件后收起选择区，避免占着屏幕第一屏
+  $('drop').classList.add('collapsed');
   lastBlob = null;
   hideCard('resultCard');
   showCard('runCard');
@@ -517,6 +524,7 @@ async function loadFile(f) {
     showCard('infoCard');
     $('srcWarn').textContent =
       '当前浏览器不支持 WebCodecs，无法进行硬件编码。请使用 Safari（iOS 16.4+）或其他新版浏览器打开。';
+    $('drop').classList.remove('collapsed');
     return;
   }
 
@@ -586,6 +594,7 @@ async function loadFile(f) {
     $('meta').textContent = '';
     showCard('infoCard');
     $('srcWarn').textContent = '读取失败：' + e.message;
+    $('drop').classList.remove('collapsed');
   }
 }
 
@@ -717,32 +726,20 @@ $('start').addEventListener('click', async () => {
     const url = URL.createObjectURL(lastBlob);
     const v = $('preview');
     v.src = url;
-    // 取首帧作为封面：加载元数据后跳到 0.1s 并绘制到 canvas，
-    // 避免 Safari 在未播放时不渲染 video 内容导致缩略图全黑
-    v.addEventListener('loadeddata', () => {
-      try {
-        v.currentTime = Math.min(0.1, (srcInfo.duration || 1) / 4);
-      } catch (e) {}
-    }, { once: true });
-    v.addEventListener('seeked', () => {
-      try {
-        const c = document.createElement('canvas');
-        c.width = 184; c.height = 184;
-        const ctx = c.getContext('2d');
-        // cover 裁切，保持竖屏视频不拉伸
-        const vw = v.videoWidth, vh = v.videoHeight;
-        const s = Math.max(c.width / vw, c.height / vh);
-        const dw = vw * s, dh = vh * s;
-        ctx.drawImage(v, (c.width - dw) / 2, (c.height - dh) / 2, dw, dh);
-        const img = new Image();
-        img.src = c.toDataURL('image/jpeg', 0.82);
-        img.alt = '';
-        img.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block';
-        v.style.display = 'none';
-        v.parentNode.insertBefore(img, v);
-        img.classList.add('thumbImg');
-      } catch (e) { /* 跨域/解码失败时保持黑底 + 播放按钮 */ }
-    }, { once: true });
+    v.style.display = '';
+
+    // 生成缩略图封面。
+    // iOS Safari 对 Blob 视频常常不触发 loadeddata，导致画面不渲染（纯黑）。
+    // 因此改用两路兜底：
+    //   1) 用 VideoDecoder 从源文件的第一个关键帧抓取（最可靠，不依赖 <video> 渲染）
+    //   2) 退回到 <video> + seek，并在多事件上重试
+    captureThumb().then(img => {
+      if (!img) return;
+      v.style.display = 'none';
+      const old = document.querySelector('.thumbImg');
+      if (old) old.remove();
+      v.parentNode.insertBefore(img, v);
+    });
 
     showCard('resultCard');
   } catch (e) {
@@ -755,9 +752,135 @@ $('start').addEventListener('click', async () => {
   }
 });
 
+/* ---------- 生成缩略图封面 ---------- */
+// 用 mediabunny 从源视频解出一帧画到 canvas，返回 <img>。
+// 不依赖 <video> 元素的渲染，避免 iOS 上 Blob 视频不显示画面导致纯黑。
+async function captureThumb() {
+  const SIZE = 184;
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width = SIZE; canvas.height = SIZE;
+    const ctx = canvas.getContext('2d');
+
+    // 先铺一层深色渐变，即使抓帧失败也不是死黑
+    const bg = ctx.createLinearGradient(0, 0, SIZE, SIZE);
+    bg.addColorStop(0, '#12203a');
+    bg.addColorStop(.55, '#1b1b3a');
+    bg.addColorStop(1, '#2a1b3d');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, SIZE, SIZE);
+
+    let drew = false;
+    const vTrack = srcInfo && srcInfo.vTrack;
+    if (vTrack) {
+      // 跳到一个非首帧位置，避开部分视频首帧为黑的编码
+      const t = Math.min(0.5, (srcInfo.duration || 1) / 3);
+      const sink = new mb.CanvasSink(vTrack, {
+        fit: 'cover',
+        width: SIZE,
+        height: SIZE
+      });
+      const frame = await sink.getCanvas(t);
+      if (frame && frame.canvas) {
+        ctx.drawImage(frame.canvas, 0, 0, SIZE, SIZE);
+        drew = true;
+      }
+    }
+
+    if (!drew) throw new Error('no frame');
+
+    const img = new Image();
+    img.src = canvas.toDataURL('image/jpeg', 0.85);
+    img.alt = '';
+    img.className = 'thumbImg';
+    img.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block';
+    return img;
+  } catch (e) {
+    // 兜底：退回 <video> 抓帧
+    try {
+      const img = await captureThumbFromVideo();
+      if (img) return img;
+    } catch (e2) {}
+    return null;
+  }
+}
+
+// 兜底方案：<video> seek 后 drawImage，多事件触发重试
+function captureThumbFromVideo() {
+  return new Promise(resolve => {
+    const SIZE = 184;
+    const v = document.createElement('video');
+    v.muted = true; v.playsInline = true; v.preload = 'auto';
+    v.crossOrigin = 'anonymous';
+    let settled = false, tries = 0;
+
+    const finish = ok => {
+      if (settled) return;
+      settled = true;
+      try {
+        if (!ok) return resolve(null);
+        const c = document.createElement('canvas');
+        c.width = SIZE; c.height = SIZE;
+        const ctx = c.getContext('2d');
+        const vw = v.videoWidth, vh = v.videoHeight;
+        if (!vw || !vh) return resolve(null);
+        const s = Math.max(SIZE / vw, SIZE / vh);
+        ctx.drawImage(v, (SIZE - vw * s) / 2, (SIZE - vh * s) / 2, vw * s, vh * s);
+        const img = new Image();
+        img.src = c.toDataURL('image/jpeg', 0.85);
+        img.alt = '';
+        img.className = 'thumbImg';
+        img.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block';
+        resolve(img);
+      } catch (e) { resolve(null); }
+      finally { v.src = ''; }
+    };
+
+    const trySeek = () => {
+      if (settled) return;
+      if (++tries > 6) return finish(false);
+      try { v.currentTime = 0.5 + tries * 0.3; } catch (e) { finish(false); }
+    };
+
+    v.addEventListener('loadeddata', trySeek);
+    v.addEventListener('loadedmetadata', trySeek);
+    v.addEventListener('seeked', () => finish(true));
+    v.addEventListener('canplay', trySeek);
+    v.addEventListener('error', () => finish(false));
+    v.src = URL.createObjectURL(lastBlob);
+
+    // 总超时保护
+    setTimeout(() => finish(false), 4000);
+  });
+}
+
 /* ---------- 保存 ---------- */
-$('download').addEventListener('click', () => {
+// iOS Safari 不允许网页直接写入相册，唯一合法途径是系统分享面板里的「存储到照片」。
+// 因此优先调用 Web Share API 直接唤起分享面板，用户一步就能存进相册。
+function saveFile() {
   if (!lastBlob) return;
+  const file = new File([lastBlob], lastName, { type: 'video/mp4' });
+
+  // 支持分享文件时，直接弹出系统面板（含「存储到照片」）
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    navigator.share({
+      files: [file],
+      title: lastName
+    }).then(() => {
+      $('saveHint').textContent = '已保存。若没看到视频，请到相册的「最近项目」查看。';
+    }).catch(err => {
+      // 用户取消不提示
+      if (err && err.name === 'AbortError') return;
+      downloadFallback();
+    });
+    return;
+  }
+
+  downloadFallback();
+}
+
+// 兜底：走浏览器下载（存到「文件」App）
+function downloadFallback() {
   const url = URL.createObjectURL(lastBlob);
   const a = document.createElement('a');
   a.href = url;
@@ -767,8 +890,11 @@ $('download').addEventListener('click', () => {
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 60000);
 
-  $('saveHint').textContent = '如未自动保存，点开左侧预览长按视频，选择「存储到照片」。';
-});
+  $('saveHint').textContent =
+    '当前浏览器不支持直接分享。文件已下载到「文件」App，可在相册里用「导入」加入照片。';
+}
+
+$('download').addEventListener('click', saveFile);
 
 /* ---------- 重置 ---------- */
 $('again').addEventListener('click', () => {
@@ -784,6 +910,7 @@ $('again').addEventListener('click', () => {
   hideCard('optCard');
   hideCard('resultCard');
   hideCard('runCard');
+  $('drop').classList.remove('collapsed');
   $('saveHint').textContent = '';
   $('status').style.color = '';
   $('saveTag').style.background = '';
