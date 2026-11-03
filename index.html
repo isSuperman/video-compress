@@ -402,6 +402,10 @@ const APP_VERSION = (() => {
     const url = './version.json' + (bust ? '?t=' + Date.now() : '');
     const r = await fetch(url, bust ? { cache: 'no-store' } : undefined);
     if (!r.ok) throw new Error('HTTP ' + r.status);
+    // 若站点没有 version.json，Pages 会回退返回 index.html，
+    // 这里按 content-type 判断，避免把 HTML 当 JSON 解析后报错
+    const ct = r.headers.get('content-type') || '';
+    if (!ct.includes('json')) throw new Error('NO_VERSION_FILE');
     return r.json();
   }
 
@@ -409,19 +413,23 @@ const APP_VERSION = (() => {
     try {
       const v = await fetchVersion(false);
       current = v;
-      const when = v.builtAt
-        ? new Date(v.builtAt).toLocaleString('zh-CN', {
-            month: '2-digit', day: '2-digit',
-            hour: '2-digit', minute: '2-digit', hour12: false
-          })
-        : '';
-      el.textContent = `${v.version}${when ? ' · ' + when : ''}`;
+      const when = fmtBuildTime(v.builtAt);
+      el.textContent = [v.version, when].filter(Boolean).join(' · ');
       box.className = 'ver ok';
       box.title = '点击检查更新';
     } catch (e) {
-      el.textContent = '版本未知';
+      el.textContent = e.message === 'NO_VERSION_FILE' ? '未部署版本文件' : '版本未知';
       box.className = 'ver err';
     }
+  }
+
+  // 构建时间格式化为本地时间（MM/DD HH:mm）
+  function fmtBuildTime(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (isNaN(d)) return '';
+    const p = n => String(n).padStart(2, '0');
+    return `${p(d.getMonth() + 1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
   }
 
   // 点击手动检查更新
