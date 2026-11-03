@@ -856,9 +856,8 @@ async function startConvert() {
 
     const saved = Math.round((1 - lastBlob.size / srcFile.size) * 100);
 
-    $('bar').style.width = '100%';
-    $('status').className = 'status';
-    $('status').textContent = `完成 · 用时 ${elapsed.toFixed(1)} 秒`;
+    // 完成后整张源文件卡（含压缩按钮与输出设置）收起，只留结果卡
+    $('status').textContent = '';
 
     $('rOrig').textContent = mbStr(srcFile.size);
     $('rNew').textContent = mbStr(lastBlob.size);
@@ -881,6 +880,7 @@ async function startConvert() {
 
     // 耗时放在成果栏
     $('rTime').textContent = `用时 ${elapsed.toFixed(1)} 秒`;
+    hideCard('infoCard');
 
     // 完成后隐藏状态提示
     $('status').textContent = '';
@@ -894,10 +894,10 @@ async function startConvert() {
     $('status').classList.remove('hide');
     $('status').textContent = '失败：' + (e && e.message ? e.message : String(e));
   } finally {
-    // 无论成功或失败，按钮都要回到可点状态
+    // 失败时按钮要回到可点状态；成功时卡片已隐藏，无需处理
     const b = $('start');
     if (b.classList.contains('busy')) {
-      setBtnState('idle', lastBlob ? '重新压缩' : '开始压缩');
+      setBtnState('idle', '开始压缩');
     }
   }
 }
