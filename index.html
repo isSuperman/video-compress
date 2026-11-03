@@ -141,29 +141,62 @@
   .label::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent)}
 
   /* ── 分段控件 ── */
-  .seg{
-    display:flex;gap:4px;padding:4px;border-radius:var(--r-md);
-    background:rgba(0,0,0,.3);
-    border:1px solid rgba(255,255,255,.055);
-    box-shadow:0 1px 0 rgba(255,255,255,.045) inset;
-    margin-bottom:16px;
+  /* ── 紧凑选项：一行一组 ── */
+  .optRow{
+    display:flex;align-items:center;gap:10px;
+    min-height:38px;
   }
-  .seg:last-of-type{margin-bottom:0}
-  .opt{
-    flex:1;padding:10px 4px;border:0;border-radius:12px;background:transparent;
-    color:var(--dim);font:inherit;font-size:13px;font-weight:550;cursor:pointer;
-    text-align:center;transition:.2s cubic-bezier(.22,.9,.28,1);position:relative;
+  .optRow + .optRow{margin-top:10px}
+  .optKey{
+    flex:0 0 auto;font-size:12.5px;color:var(--dim);
+    letter-spacing:.02em;width:3.2em;
   }
-  .opt small{display:block;font-size:10.5px;opacity:.68;margin-top:2px;font-weight:400;letter-spacing:.01em}
-  .opt.on{
+
+  /* 分辨率：小胶囊 */
+  .chips{display:flex;gap:6px;flex:1}
+  .chip{
+    flex:1;padding:8px 4px;border-radius:10px;
+    border:1px solid rgba(255,255,255,.075);
+    background:rgba(255,255,255,.028);
+    color:var(--dim);font:inherit;font-size:12.5px;font-weight:550;
+    cursor:pointer;text-align:center;
+    transition:background .16s, color .16s, border-color .16s, box-shadow .16s;
+  }
+  .chips .chip.on{
     color:#fff;font-weight:650;
     background:linear-gradient(178deg,rgba(79,124,255,.92),rgba(120,92,255,.86));
-    box-shadow:
-      0 1px 0 rgba(255,255,255,.28) inset,
-      0 6px 18px -8px rgba(79,124,255,.95),
-      0 0 0 1px rgba(140,170,255,.4);
+    border-color:transparent;
+    box-shadow:0 1px 0 rgba(255,255,255,.26) inset,0 5px 16px -8px rgba(79,124,255,.95);
   }
-  .opt.on small{opacity:.85}
+
+  /* 画质：滑杆 */
+  .slideWrap{flex:1;min-width:0}
+  .slideWrap input[type=range]{
+    -webkit-appearance:none;appearance:none;
+    width:100%;height:4px;border-radius:99px;margin:0;
+    background:linear-gradient(90deg,#3fd8ff,#4f7cff 50%,#9d6bff);
+    outline:none;
+  }
+  .slideWrap input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;appearance:none;
+    width:20px;height:20px;border-radius:50%;
+    background:#fff;
+    border:2px solid rgba(79,124,255,.95);
+    box-shadow:0 2px 8px rgba(0,0,0,.55),0 0 0 4px rgba(79,124,255,.16);
+    cursor:pointer;
+  }
+  .slideWrap input[type=range]::-moz-range-thumb{
+    width:18px;height:18px;border-radius:50%;background:#fff;
+    border:2px solid rgba(79,124,255,.95);cursor:pointer;
+  }
+  .slideMarks{
+    display:flex;justify-content:space-between;
+    margin-top:5px;font-size:10px;color:var(--dimmer);letter-spacing:.03em;
+  }
+  .qVal{
+    flex:0 0 auto;width:4.4em;text-align:right;
+    font-size:11.5px;color:var(--dim);font-variant-numeric:tabular-nums;
+  }
 
   /* ── 元信息 ── */
   .meta{font-size:13px;color:var(--dim);line-height:1.8;word-break:break-word}
@@ -294,6 +327,44 @@
   .ver.stale .verDot{background:var(--warn);box-shadow:0 0 8px 1.5px rgba(255,179,64,.65)}
   .ver.err{color:var(--err);border-color:rgba(255,84,112,.28)}
   .ver.err .verDot{background:var(--err);box-shadow:0 0 8px 1.5px rgba(255,84,112,.6)}
+
+  /* ── 全屏预览浮层 ── */
+  .viewer{
+    position:fixed;top:0;left:0;right:0;bottom:0;
+    width:100%;height:100%;z-index:999;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:14px;padding:20px;
+    background:rgba(4,5,9,.94);
+    backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  }
+  .viewer video{
+    width:100%;max-height:72vh;border-radius:14px;background:#000;
+    box-shadow:0 20px 60px -20px #000;
+  }
+  .viewerClose{
+    position:absolute;top:max(16px,env(safe-area-inset-top));right:16px;
+    width:34px;height:34px;border-radius:50%;
+    border:1px solid rgba(255,255,255,.16);
+    background:rgba(255,255,255,.1);color:#fff;
+    font-size:15px;line-height:1;cursor:pointer;
+    backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  }
+  .viewerBar{
+    display:flex;align-items:center;gap:12px;width:100%;
+    padding:11px 14px;border-radius:14px;
+    background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.09);
+  }
+  .viewerName{
+    flex:1;min-width:0;font-size:12px;color:var(--dim);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  .viewerSave{
+    flex:0 0 auto;padding:9px 16px;border:0;border-radius:11px;
+    background:linear-gradient(96deg,#2fb8ff,#4f7cff 46%,#8f5cff);
+    color:#fff;font:inherit;font-size:13.5px;font-weight:650;cursor:pointer;
+    box-shadow:0 1px 0 rgba(255,255,255,.3) inset,0 8px 20px -10px rgba(79,124,255,.9);
+  }
 </style>
 </head>
 <body>
@@ -333,18 +404,29 @@
 </div>
 
 <div class="card hide" id="optCard">
-  <div class="label">输出分辨率</div>
-  <div class="seg" id="resOpts">
-    <button class="opt on" data-res="1080">1080p<small>原画质</small></button>
-    <button class="opt" data-res="720">720p<small>省流量</small></button>
-    <button class="opt" data-res="480">480p<small>更小</small></button>
+  <div class="label">输出设置</div>
+
+  <div class="optRow">
+    <span class="optKey">分辨率</span>
+    <div class="chips" id="resOpts">
+      <button class="chip on" data-res="1080">1080p</button>
+      <button class="chip" data-res="720">720p</button>
+      <button class="chip" data-res="480">480p</button>
+    </div>
   </div>
-  <div class="label">画质档位</div>
-  <div class="seg" id="qOpts">
-    <button class="opt" data-q="8">高<small>8 Mbps</small></button>
-    <button class="opt on" data-q="4">标准<small>4 Mbps</small></button>
-    <button class="opt" data-q="2">小<small>2 Mbps</small></button>
+
+  <div class="optRow">
+    <span class="optKey">画质</span>
+    <div class="slideWrap">
+      <input type="range" id="qRange" min="0" max="2" step="1" value="1"
+             aria-label="画质档位">
+      <div class="slideMarks">
+        <span>小</span><span>标准</span><span>高</span>
+      </div>
+    </div>
+    <span class="qVal" id="qVal">4 Mbps</span>
   </div>
+
   <div class="note" id="codecWarn"></div>
 </div>
 
@@ -599,15 +681,23 @@ async function loadFile(f) {
 }
 
 /* ---------- 选项 ---------- */
+// 分辨率：胶囊按钮
 $('resOpts').addEventListener('click', e => {
-  const b = e.target.closest('.opt'); if (!b) return;
+  const b = e.target.closest('.chip'); if (!b) return;
   [...$('resOpts').children].forEach(x => x.classList.remove('on'));
   b.classList.add('on'); selRes = +b.dataset.res;
 });
-$('qOpts').addEventListener('click', e => {
-  const b = e.target.closest('.opt'); if (!b) return;
-  [...$('qOpts').children].forEach(x => x.classList.remove('on'));
-  b.classList.add('on'); selQ = +b.dataset.q;
+
+// 画质：滑杆，0=小(2Mbps) 1=标准(4Mbps) 2=高(8Mbps)
+const Q_LEVELS = [
+  { q: 2, label: '2 Mbps' },
+  { q: 4, label: '4 Mbps' },
+  { q: 8, label: '8 Mbps' }
+];
+$('qRange').addEventListener('input', e => {
+  const lv = Q_LEVELS[+e.target.value] || Q_LEVELS[1];
+  selQ = lv.q;
+  $('qVal').textContent = lv.label;
 });
 
 /* ---------- 计算目标尺寸 ---------- */
@@ -623,12 +713,61 @@ function targetSize(w, h, maxDim) {
 }
 
 /* ---------- 缩略图点击：全屏预览 ---------- */
+// 不能直接对 #preview 调全屏：生成封面后它被 display:none 隐藏了，
+// iOS 对隐藏的 video 调全屏会静默失败。这里用一个独立的全屏浮层播放。
 $('thumb').addEventListener('click', () => {
-  const v = $('preview');
   if (!lastBlob) return;
-  if (v.requestFullscreen) v.requestFullscreen().catch(() => {});
-  else if (v.webkitEnterFullscreen) v.webkitEnterFullscreen();
+  openViewer();
 });
+
+function openViewer() {
+  if (!lastBlob) return;
+
+  const mask = document.createElement('div');
+  mask.className = 'viewer';
+
+  const v = document.createElement('video');
+  v.controls = true;
+  v.playsInline = true;
+  v.autoplay = true;
+  v.src = URL.createObjectURL(lastBlob);
+
+  const close = document.createElement('button');
+  close.className = 'viewerClose';
+  close.textContent = '✕';
+  close.setAttribute('aria-label', '关闭');
+
+  const bar = document.createElement('div');
+  bar.className = 'viewerBar';
+  const saveBtn = document.createElement('button');
+  saveBtn.className = 'viewerSave';
+  saveBtn.textContent = '保存到相册';
+  const name = document.createElement('span');
+  name.className = 'viewerName';
+  name.textContent = lastName;
+  bar.append(name, saveBtn);
+
+  mask.append(v, close, bar);
+  document.body.appendChild(mask);
+  document.body.style.overflow = 'hidden';
+
+  const destroy = () => {
+    try { v.pause(); } catch (e) {}
+    URL.revokeObjectURL(v.src);
+    mask.remove();
+    document.body.style.overflow = '';
+    document.removeEventListener('keydown', onKey);
+  };
+  const onKey = e => { if (e.key === 'Escape') destroy(); };
+
+  close.addEventListener('click', destroy);
+  saveBtn.addEventListener('click', () => { destroy(); saveFile(); });
+  mask.addEventListener('click', e => { if (e.target === mask) destroy(); });
+  document.addEventListener('keydown', onKey);
+
+  // 播放失败时（如自动播放被拦截）仍保留控制条可手动播放
+  v.play().catch(() => {});
+}
 
 /* ---------- 开始压缩 ---------- */
 $('start').addEventListener('click', async () => {
