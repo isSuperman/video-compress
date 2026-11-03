@@ -229,6 +229,72 @@
   }
   button.primary:disabled::after{display:none}
 
+  /* ── 压缩按钮（进度与按钮合一） ── */
+  .actBtn{
+    position:relative;overflow:hidden;
+    margin-top:16px;padding:15px 18px;
+    border-radius:var(--r-md);cursor:pointer;
+    background:linear-gradient(96deg,#2fb8ff,#4f7cff 46%,#8f5cff);
+    box-shadow:
+      0 1px 0 rgba(255,255,255,.3) inset,
+      0 10px 28px -12px rgba(79,124,255,.9),
+      0 0 0 .5px rgba(120,150,255,.5);
+    transition:transform .15s ease, box-shadow .2s ease, background .25s ease;
+    -webkit-user-select:none;user-select:none;
+  }
+  .actBtn:active{transform:scale(.985)}
+
+  /* 进行中：按钮整体转为深色底，进度以高亮渐变从左侧推进，
+     对比明显，一眼能看出进度 */
+  .actFill{
+    position:absolute;top:0;left:0;bottom:0;width:0;
+    background:linear-gradient(96deg,#3fd8ff,#5b8cff 48%,#a97dff);
+    box-shadow:0 0 18px rgba(79,124,255,.65);
+    pointer-events:none;
+  }
+  /* 进度前沿的亮边 */
+  .actFill::after{
+    content:"";position:absolute;top:0;right:-1px;bottom:0;width:3px;
+    background:#fff;
+    box-shadow:0 0 12px 2px rgba(255,255,255,.8);
+  }
+
+  .actRow{
+    position:relative;z-index:1;
+    display:flex;align-items:center;justify-content:center;gap:8px;
+  }
+  .actLabel{
+    font-size:16px;font-weight:650;color:#fff;letter-spacing:.01em;
+    font-variant-numeric:tabular-nums;
+  }
+  .actPct{
+    font-size:13px;font-weight:600;color:rgba(255,255,255,.82);
+    font-variant-numeric:tabular-nums;letter-spacing:.02em;
+  }
+  .actPct:empty{display:none}
+
+  /* 进行中：去掉渐变，让进度填充成为主体 */
+  .actBtn.busy{
+    background:rgba(255,255,255,.07);
+    box-shadow:
+      0 1px 0 rgba(255,255,255,.09) inset,
+      0 0 0 .5px rgba(255,255,255,.08),
+      0 8px 24px -16px rgba(79,124,255,.7);
+    cursor:default;
+  }
+  .actBtn.busy:active{transform:none}
+
+  /* 不可用（未选文件 / 校验中） */
+  .actBtn.disabled{
+    background:rgba(255,255,255,.055);
+    color:var(--dimmer);
+    box-shadow:0 1px 0 rgba(255,255,255,.05) inset;
+    cursor:default;pointer-events:none;
+  }
+  .actBtn.disabled .actLabel{color:var(--dimmer)}
+  .actBtn.disabled:active{transform:none}
+
+
   button.ghost{
     width:100%;padding:13px;margin-top:9px;
     border:1px solid var(--line);border-radius:var(--r-md);
@@ -251,7 +317,10 @@
     box-shadow:0 0 14px 0 rgba(79,124,255,.85);
     transition:width .2s cubic-bezier(.3,.9,.3,1);
   }
-  .status{font-size:12.5px;color:var(--dim);text-align:center;min-height:19px;font-variant-numeric:tabular-nums}
+  .status{
+    font-size:12.5px;color:var(--dim);text-align:center;
+    margin-top:10px;line-height:1.5;font-variant-numeric:tabular-nums;
+  }
 
   /* ── 结果 ── */
   .divider{
@@ -422,14 +491,16 @@
   </div>
 
   <div class="note" id="codecWarn"></div>
-</div>
 
-<div class="card hide" id="runCard">
-  <button class="primary" id="start">开始压缩</button>
-  <div class="hide" id="barWrap">
-    <div class="bar"><i id="bar"></i></div>
-    <div class="status" id="status"></div>
+  <!-- 压缩按钮 + 进度：同一个容器内，进度沿按钮底边推进 -->
+  <div class="actBtn" id="start" role="button" tabindex="0">
+    <div class="actFill" id="bar"></div>
+    <div class="actRow">
+      <span class="actLabel" id="actLabel">开始压缩</span>
+      <span class="actPct" id="actPct"></span>
+    </div>
   </div>
+  <div class="hide" id="status"></div>
 </div>
 
 <div class="card hide" id="resultCard">
@@ -543,8 +614,16 @@ function hideCard(id){
   $(id).classList.add('hide');
 }
 // 进度区不是 .card，单独显隐
-function barWrapShow(){
-  $('barWrap').classList.remove('hide');
+// 一体化按钮的三种状态：可用 / 进行中 / 不可用
+function setBtnState(state, label) {
+  const b = $('start');
+  b.classList.toggle('disabled', state === 'disabled');
+  b.classList.toggle('busy', state === 'busy');
+  if (label != null) $('actLabel').textContent = label;
+  if (state === 'idle') {
+    $('bar').style.width = '0%';
+    $('actPct').textContent = '';
+  }
 }
 
 /* ---------- 环境检测 ---------- */
@@ -582,13 +661,12 @@ async function loadFile(f) {
   $('drop').classList.add('collapsed');
   lastBlob = null;
   hideCard('resultCard');
-  showCard('runCard');
-  $('barWrap').classList.add('hide');
+  setBtnState('disabled', '开始压缩');
   $('status').textContent = '';
   $('status').className = 'status';
   $('srcWarn').textContent = '';
   $('codecWarn').textContent = '';
-  $('start').disabled = true;
+  setBtnState('disabled');
 
   if (!HAS_WC) {
     $('meta').textContent = '';
@@ -658,7 +736,7 @@ async function loadFile(f) {
       return;
     }
 
-    $('start').disabled = false;
+    setBtnState('idle', '开始压缩');
   } catch (e) {
     console.error(e);
     $('meta').textContent = '';
@@ -701,15 +779,22 @@ function targetSize(w, h, maxDim) {
 }
 
 /* ---------- 开始压缩 ---------- */
-$('start').addEventListener('click', async () => {
-  if (!srcFile || !srcInfo) return;
+$('start').addEventListener('click', startConvert);
+// div 模拟按钮，补上键盘触发
+$('start').addEventListener('keydown', e => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    $('start').click();
+  }
+});
 
-  const btn = $('start');
-  btn.disabled = true;
-  barWrapShow();
+async function startConvert() {
+  if (!srcFile || !srcInfo || $('start').classList.contains('disabled')) return;
+
+  setBtnState('busy', '准备中');
   $('bar').style.width = '0%';
   $('status').className = 'status';
-  $('status').textContent = '准备中…';
+  $('status').textContent = '';
 
   try {
     // 缩放基准用「短边」判断清晰度档位：1080p 指短边 1080。
@@ -755,7 +840,8 @@ $('start').addEventListener('click', async () => {
     conversion.onProgress = p => {
       const pct = Math.min(100, Math.round(p * 100));
       $('bar').style.width = pct + '%';
-      $('status').textContent = `压缩中… ${pct}%`;
+      $('actLabel').textContent = '压缩中';
+      $('actPct').textContent = pct + '%';
     };
 
     const t0 = performance.now();
@@ -796,19 +882,25 @@ $('start').addEventListener('click', async () => {
     // 耗时放在成果栏
     $('rTime').textContent = `用时 ${elapsed.toFixed(1)} 秒`;
 
-    // 压缩完成后收起压缩区，下方「处理另一个视频」足以承担下一步
-    hideCard('runCard');
+    // 完成后隐藏状态提示
+    $('status').textContent = '';
 
     showCard('resultCard');
   } catch (e) {
     console.error(e);
+    setBtnState('idle', '重新压缩');
     $('status').className = 'status';
     $('status').style.color = 'var(--err)';
+    $('status').classList.remove('hide');
     $('status').textContent = '失败：' + (e && e.message ? e.message : String(e));
   } finally {
-    btn.disabled = false;
+    // 无论成功或失败，按钮都要回到可点状态
+    const b = $('start');
+    if (b.classList.contains('busy')) {
+      setBtnState('idle', lastBlob ? '重新压缩' : '开始压缩');
+    }
   }
-});
+}
 
 /* ---------- 保存 ---------- */
 // iOS Safari 不允许网页直接写入相册，唯一合法途径是系统分享面板里的「存储到照片」。
@@ -858,7 +950,6 @@ $('again').addEventListener('click', () => {
   fileInput.value = '';
   hideCard('infoCard');
   hideCard('resultCard');
-  hideCard('runCard');
   $('drop').classList.remove('collapsed');
   $('saveHint').textContent = '';
   $('rTime').textContent = '';
