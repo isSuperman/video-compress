@@ -3,8 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#05060a">
-<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#05060a" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#eef1f7" media="(prefers-color-scheme: light)">
+<meta name="color-scheme" content="dark light">
 <title>MC作业专用</title>
 
 <!-- 图标：Safari 优先用 SVG（透明背景，任意尺寸清晰） -->
@@ -16,12 +17,14 @@
 <!-- 添加到主屏幕：以独立应用方式启动，全屏无 Safari 界面 -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="MC作业">
 <meta name="application-name" content="MC作业">
 <meta name="format-detection" content="telephone=no">
 <style>
+  /* ── 主题变量 ── 深色为默认，浅色在 media query 里覆盖 */
   :root{
+    color-scheme: dark light;
     --bg:#05060a;
     --text:#f2f4f8;
     --dim:#8a90a3;
@@ -36,9 +39,62 @@
     --err:#ff5470;
     --glass:rgba(255,255,255,.045);
     --glass-2:rgba(255,255,255,.07);
+
+    /* —— 语义色，浅色模式会整体替换 —— */
+    --hair:rgba(255,255,255,.09);        /* 细分隔线 */
+    --inset:rgba(255,255,255,.045);      /* 内嵌/卡片内小元素底 */
+    --inset-2:rgba(255,255,255,.07);
+    --sunken:rgba(0,0,0,.30);            /* 凹陷容器（滑块槽等） */
+    --card-hi:rgba(255,255,255,.07);     /* 卡片顶部高光 */
+    --card-lo:rgba(0,0,0,.22);           /* 卡片底部阴影 */
+    --shadow:rgba(0,0,0,.95);
+
+    /* 背景光晕强度 */
+    --g1:rgba(63,216,255,.20);
+    --g2:rgba(157,107,255,.18);
+    --g3:rgba(79,124,255,.11);
+    --grid:rgba(255,255,255,.022);
+
+    /* 标题渐变 */
+    --h1-a:#ffffff; --h1-b:#d9ecff; --h1-c:#7ec8ff; --h1-d:#a98bff;
+    --h1-glow:rgba(90,160,255,.30);
+
     --r-lg:22px;
     --r-md:16px;
     --r-sm:12px;
+  }
+
+  /* ── 浅色模式 ── */
+  @media (prefers-color-scheme: light){
+    :root{
+      --bg:#eef1f7;
+      --text:#10131a;
+      --dim:#4a5468;
+      --dimmer:#6b7488;
+      --line:rgba(16,19,26,.10);
+      --line-hi:rgba(60,120,220,.30);
+      --ok:#0aa96b;
+      --warn:#b26a00;
+      --err:#d32f4a;
+      --glass:rgba(255,255,255,.72);
+      --glass-2:rgba(255,255,255,.85);
+
+      --hair:rgba(16,19,26,.09);
+      --inset:rgba(16,19,26,.035);
+      --inset-2:rgba(16,19,26,.055);
+      --sunken:rgba(16,19,26,.06);
+      --card-hi:rgba(255,255,255,.95);
+      --card-lo:rgba(16,19,26,.04);
+      --shadow:rgba(30,45,80,.14);
+
+      --g1:rgba(63,180,255,.30);
+      --g2:rgba(157,107,255,.24);
+      --g3:rgba(79,124,255,.16);
+      --grid:rgba(16,19,26,.035);
+
+      --h1-a:#0b0d13; --h1-b:#1b3a6b; --h1-c:#2f7fd6; --h1-d:#6a4bd8;
+      --h1-glow:rgba(80,140,230,.22);
+    }
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   /* 添加到主屏幕后按独立应用运行：禁用橡皮筋回弹与文字选中 */
@@ -67,8 +123,8 @@
   body::after{
     content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
     background-image:
-      linear-gradient(rgba(255,255,255,.022) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255,255,255,.022) 1px, transparent 1px);
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
     background-size:44px 44px;
     mask-image:radial-gradient(72% 58% at 50% 24%, #000 0%, transparent 82%);
     -webkit-mask-image:radial-gradient(72% 58% at 50% 24%, #000 0%, transparent 82%);
@@ -87,10 +143,10 @@
   }
   h1{
     font-size:27px;line-height:1.16;margin:0 0 8px;font-weight:700;letter-spacing:-.025em;
-    background:linear-gradient(100deg,#ffffff 0%,#d9ecff 26%,#7ec8ff 56%,#a98bff 84%,#e0b0ff 100%);
+    background:linear-gradient(100deg,var(--h1-a) 0%,var(--h1-b) 26%,var(--h1-c) 56%,var(--h1-d) 84%,var(--h1-d) 100%);
     -webkit-background-clip:text;background-clip:text;
     -webkit-text-fill-color:transparent;color:transparent;
-    filter:drop-shadow(0 0 22px rgba(90,160,255,.3));
+    filter:drop-shadow(0 0 22px var(--h1-glow));
   }
   .sub{color:var(--dim);font-size:13px;line-height:1.6}
 
@@ -105,7 +161,7 @@
     backdrop-filter:blur(24px) saturate(180%);
     -webkit-backdrop-filter:blur(24px) saturate(180%);
     box-shadow:
-      0 1px 0 rgba(255,255,255,.07) inset,
+      0 1px 0 var(--inset-2) inset,
       0 -1px 0 rgba(0,0,0,.22) inset,
       0 12px 34px -20px rgba(0,0,0,.95);
   }
@@ -116,20 +172,20 @@
   /* ── 拖放区 ── */
   .drop{
     position:relative;overflow:hidden;
-    border:1.5px dashed rgba(255,255,255,.14);
+    border:1.5px dashed var(--card-hi);
     border-radius:var(--r-lg);
     padding:34px 18px 30px;
     text-align:center;cursor:pointer;
-    background:linear-gradient(168deg,rgba(63,216,255,.075),rgba(157,107,255,.055) 58%,rgba(255,255,255,.022));
+    background:linear-gradient(168deg,rgba(63,216,255,.075),rgba(157,107,255,.055) 58%,var(--grid));
     backdrop-filter:blur(24px) saturate(180%);
     -webkit-backdrop-filter:blur(24px) saturate(180%);
-    box-shadow:0 1px 0 rgba(255,255,255,.08) inset, 0 16px 40px -24px rgba(0,0,0,.9);
+    box-shadow:0 1px 0 var(--inset-2) inset, 0 16px 40px -24px rgba(0,0,0,.9);
     transition:transform .18s cubic-bezier(.22,.9,.28,1), border-color .2s, box-shadow .2s;
     margin-bottom:13px;
   }
   .drop::after{
     content:"";position:absolute;top:-60%;left:-30%;width:60%;height:220%;
-    background:linear-gradient(105deg,transparent,rgba(255,255,255,.07),transparent);
+    background:linear-gradient(105deg,transparent,var(--inset-2),transparent);
     transform:rotate(14deg);pointer-events:none;
   }
   .drop:active{transform:scale(.982)}
@@ -142,9 +198,9 @@
   .drop .ring{
     width:64px;height:64px;margin:0 auto 16px;border-radius:50%;
     display:grid;place-items:center;
-    background:radial-gradient(circle at 34% 28%,rgba(255,255,255,.16),rgba(255,255,255,.03));
-    border:1px solid rgba(255,255,255,.14);
-    box-shadow:0 0 26px -6px rgba(63,216,255,.55), 0 1px 0 rgba(255,255,255,.16) inset;
+    background:radial-gradient(circle at 34% 28%,var(--card-hi),var(--inset));
+    border:1px solid var(--card-hi);
+    box-shadow:0 0 26px -6px rgba(63,216,255,.55), 0 1px 0 var(--card-hi) inset;
   }
   .drop .ring svg{width:27px;height:27px;stroke:url(#g1);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
   .drop .t{font-size:16.5px;font-weight:620;letter-spacing:-.01em}
@@ -174,8 +230,8 @@
   .chips{display:flex;gap:6px;flex:1}
   .chip{
     flex:1;padding:8px 4px;border-radius:10px;
-    border:1px solid rgba(255,255,255,.075);
-    background:rgba(255,255,255,.028);
+    border:1px solid var(--inset-2);
+    background:var(--inset);
     color:var(--dim);font:inherit;font-size:12.5px;font-weight:550;
     cursor:pointer;text-align:center;
     transition:background .16s, color .16s, border-color .16s, box-shadow .16s;
@@ -241,8 +297,8 @@
   button.primary:active{transform:scale(.982)}
   button.primary:active::after{transform:translateX(120%)}
   button.primary:disabled{
-    background:rgba(255,255,255,.055);color:var(--dimmer);
-    box-shadow:0 1px 0 rgba(255,255,255,.05) inset;
+    background:var(--inset-2);color:var(--dimmer);
+    box-shadow:0 1px 0 var(--inset) inset;
     cursor:default;
   }
   button.primary:disabled::after{display:none}
@@ -293,10 +349,10 @@
 
   /* 进行中：去掉渐变，让进度填充成为主体 */
   .actBtn.busy{
-    background:rgba(255,255,255,.07);
+    background:var(--inset-2);
     box-shadow:
-      0 1px 0 rgba(255,255,255,.09) inset,
-      0 0 0 .5px rgba(255,255,255,.08),
+      0 1px 0 var(--hair) inset,
+      0 0 0 .5px var(--inset-2),
       0 8px 24px -16px rgba(79,124,255,.7);
     cursor:default;
   }
@@ -304,9 +360,9 @@
 
   /* 不可用（未选文件 / 校验中） */
   .actBtn.disabled{
-    background:rgba(255,255,255,.055);
+    background:var(--inset-2);
     color:var(--dimmer);
-    box-shadow:0 1px 0 rgba(255,255,255,.05) inset;
+    box-shadow:0 1px 0 var(--inset) inset;
     cursor:default;pointer-events:none;
   }
   .actBtn.disabled .actLabel{color:var(--dimmer)}
@@ -327,12 +383,12 @@
     stroke-width:2;stroke-linecap:round;stroke-linejoin:round;
     opacity:.8;
   }
-  .linkBtn:active{color:var(--dim);background:rgba(255,255,255,.045)}
+  .linkBtn:active{color:var(--dim);background:var(--inset)}
 
   /* ── 进度 ── */
   .bar{
     height:5px;border-radius:99px;overflow:hidden;margin:14px 0 10px;
-    background:rgba(255,255,255,.075);
+    background:var(--inset-2);
     box-shadow:0 1px 2px rgba(0,0,0,.4) inset;
   }
   .bar>i{
@@ -349,7 +405,7 @@
   /* ── 结果 ── */
   .divider{
     height:1px;margin:15px 0;
-    background:linear-gradient(90deg,transparent,rgba(255,255,255,.09) 18%,rgba(255,255,255,.09) 82%,transparent);
+    background:linear-gradient(90deg,transparent,var(--hair) 18%,var(--hair) 82%,transparent);
   }
   .resTop{
     display:flex;align-items:center;gap:9px;margin-bottom:14px;flex-wrap:wrap;
@@ -367,8 +423,8 @@
   .row{display:flex;gap:8px}
   .row>div{
     flex:1;padding:11px 6px;border-radius:13px;text-align:center;
-    background:rgba(255,255,255,.032);
-    border:1px solid rgba(255,255,255,.06);
+    background:var(--inset);
+    border:1px solid var(--inset-2);
     font-size:10.5px;color:var(--dim);letter-spacing:.04em;
   }
   .row b{
@@ -382,7 +438,7 @@
   .row .new b{color:var(--ok)}
   .spec{
     font-size:11.5px;color:var(--dim);line-height:1.65;margin-top:11px;
-    padding-top:11px;border-top:1px solid rgba(255,255,255,.065);
+    padding-top:11px;border-top:1px solid var(--hair);
   }
 
   .note{font-size:12.5px;color:var(--warn);margin-top:11px;line-height:1.6}
@@ -399,8 +455,8 @@
   .ver{
     display:inline-flex;align-items:center;gap:6px;
     margin-top:14px;padding:5px 12px;border-radius:99px;
-    background:rgba(255,255,255,.04);
-    border:1px solid rgba(255,255,255,.07);
+    background:var(--inset);
+    border:1px solid var(--inset-2);
     font-size:10.5px;letter-spacing:.03em;color:var(--dimmer);
     font-variant-numeric:tabular-nums;cursor:pointer;
     transition:background .15s;
@@ -412,10 +468,10 @@
   }
   .signLine{
     flex:0 1 42px;height:1px;
-    background:linear-gradient(90deg,transparent,rgba(255,255,255,.13));
+    background:linear-gradient(90deg,transparent,var(--card-hi));
   }
   .signLine:last-child{
-    background:linear-gradient(90deg,rgba(255,255,255,.13),transparent);
+    background:linear-gradient(90deg,var(--card-hi),transparent);
   }
   .signText{
     font-size:11px;color:var(--dimmer);white-space:nowrap;
@@ -432,7 +488,7 @@
     filter:drop-shadow(0 0 6px rgba(255,95,122,.55));
     display:inline-block;transform:translateY(-.5px);
   }
-  .ver:active{background:rgba(255,255,255,.09)}
+  .ver:active{background:var(--hair)}
   .verDot{
     width:5px;height:5px;border-radius:50%;background:var(--dimmer);
     box-shadow:0 0 7px 1px rgba(138,144,163,.5);flex:0 0 auto;
@@ -460,16 +516,16 @@
   .viewerClose{
     position:absolute;top:max(16px,env(safe-area-inset-top));right:16px;
     width:34px;height:34px;border-radius:50%;
-    border:1px solid rgba(255,255,255,.16);
-    background:rgba(255,255,255,.1);color:#fff;
+    border:1px solid var(--card-hi);
+    background:var(--inset-2);color:#fff;
     font-size:15px;line-height:1;cursor:pointer;
     backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
   }
   .viewerBar{
     display:flex;align-items:center;gap:12px;width:100%;
     padding:11px 14px;border-radius:14px;
-    background:rgba(255,255,255,.06);
-    border:1px solid rgba(255,255,255,.09);
+    background:var(--inset-2);
+    border:1px solid var(--hair);
   }
   .viewerName{
     flex:1;min-width:0;font-size:12px;color:var(--dim);
