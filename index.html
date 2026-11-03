@@ -54,6 +54,34 @@
     --drop-border:rgba(255,255,255,.13);
     --drop-outline:rgba(255,255,255,.05);
     --drop-shadow:rgba(0,0,0,.9);
+
+    /* 控件阴影：浅色模式需显著减弱，否则在浅底上发黑 */
+    --thumb-shadow:rgba(0,0,0,.55);
+    --btn-glow:rgba(79,124,255,.90);
+    --fill-glow:rgba(79,124,255,.65);
+    --fill-edge:rgba(255,255,255,.80);
+    --bar-inset:rgba(0,0,0,.40);
+    --chip-glow:rgba(79,124,255,.95);
+    /* 按钮：玻璃三态（就绪 / 进行中 / 不可用） */
+    --act-bg:rgba(255,255,255,.07);
+    --act-tint-a:rgba(63,216,255,.26);
+    --act-tint-b:rgba(79,124,255,.24);
+    --act-tint-c:rgba(157,107,255,.26);
+    --act-border:rgba(255,255,255,.16);
+    --act-border-hi:rgba(255,255,255,.30);
+    --act-text:#ffffff;
+    --act-text-sub:rgba(255,255,255,.60);
+    --act-shadow:rgba(0,0,0,.45);
+    --act-hover:rgba(255,255,255,.12);
+    /* 进度条：一条细亮线 */
+    --act-fill-a:#3fd8ff; --act-fill-b:#6b8cff; --act-fill-c:#a97dff;
+    --act-fill-glow:rgba(91,140,255,.55);
+    --act-idle-bg:rgba(255,255,255,.035);
+    --act-idle-text:var(--dimmer);
+    --act-idle-border:rgba(255,255,255,.06);
+    --act-track-line:rgba(255,255,255,.12);
+    --thumb-ring:rgba(79,124,255,.95);
+    --thumb-halo:rgba(79,124,255,.16);
     --card-lo:rgba(0,0,0,.22);           /* 卡片底部阴影 */
     --shadow:rgba(0,0,0,.95);
 
@@ -111,6 +139,30 @@
       --drop-border:rgba(96,126,175,.42);
       --drop-outline:rgba(96,126,175,.16);
       --drop-shadow:rgba(30,45,80,.12);
+      --thumb-shadow:rgba(30,45,80,.18);
+      --btn-glow:rgba(79,124,255,.35);
+      --fill-glow:rgba(79,124,255,.22);
+      --fill-edge:rgba(255,255,255,.55);
+      --bar-inset:rgba(16,19,26,.08);
+      --chip-glow:rgba(79,124,255,.40);
+      --act-bg:rgba(255,255,255,.80);
+      --act-tint-a:rgba(63,180,255,.24);
+      --act-tint-b:rgba(74,114,240,.20);
+      --act-tint-c:rgba(139,98,234,.24);
+      --act-border:rgba(96,126,175,.42);
+      --act-border-hi:rgba(255,255,255,.95);
+      --act-text:#16213d;
+      --act-text-sub:rgba(22,33,61,.55);
+      --act-shadow:rgba(30,45,80,.14);
+      --act-hover:rgba(255,255,255,.95);
+      --act-fill-a:#28b8e8; --act-fill-b:#4a72f0; --act-fill-c:#8b62ea;
+      --act-fill-glow:rgba(74,114,240,.35);
+      --act-idle-bg:rgba(16,19,26,.035);
+      --act-idle-text:var(--dimmer);
+      --act-idle-border:rgba(16,19,26,.06);
+      --act-track-line:rgba(16,19,26,.10);
+      --thumb-ring:rgba(79,124,255,.70);
+      --thumb-halo:rgba(79,124,255,.12);
     }
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -264,7 +316,7 @@
     color:#fff;font-weight:650;
     background:linear-gradient(178deg,rgba(79,124,255,.92),rgba(120,92,255,.86));
     border-color:transparent;
-    box-shadow:0 1px 0 rgba(255,255,255,.26) inset,0 5px 16px -8px rgba(79,124,255,.95);
+    box-shadow:0 1px 0 rgba(255,255,255,.26) inset,0 5px 16px -8px var(--chip-glow);
   }
 
   /* 画质：滑杆 */
@@ -279,13 +331,13 @@
     -webkit-appearance:none;appearance:none;
     width:20px;height:20px;border-radius:50%;
     background:#fff;
-    border:2px solid rgba(79,124,255,.95);
-    box-shadow:0 2px 8px rgba(0,0,0,.55),0 0 0 4px rgba(79,124,255,.16);
+    border:2px solid var(--thumb-ring);
+    box-shadow:0 2px 6px var(--thumb-shadow),0 0 0 4px var(--thumb-halo);
     cursor:pointer;
   }
   .slideWrap input[type=range]::-moz-range-thumb{
     width:18px;height:18px;border-radius:50%;background:#fff;
-    border:2px solid rgba(79,124,255,.95);cursor:pointer;
+    border:2px solid var(--thumb-ring);cursor:pointer;
   }
   .slideMarks{
     display:flex;justify-content:space-between;
@@ -309,7 +361,7 @@
     cursor:pointer;
     box-shadow:
       0 1px 0 rgba(255,255,255,.3) inset,
-      0 10px 28px -12px rgba(79,124,255,.9),
+      0 10px 28px -12px var(--btn-glow),
       0 0 0 .5px rgba(120,150,255,.5);
     transition:transform .15s, filter .2s, opacity .2s;
   }
@@ -327,71 +379,89 @@
   }
   button.primary:disabled::after{display:none}
 
-  /* ── 压缩按钮（进度与按钮合一） ── */
+  /* ── 压缩按钮：玻璃质感，进度以细线呈现 ── */
   .actBtn{
     position:relative;overflow:hidden;
     margin-top:16px;padding:15px 18px;
     border-radius:var(--r-md);cursor:pointer;
-    background:linear-gradient(96deg,#2fb8ff,#4f7cff 46%,#8f5cff);
+    background:
+      linear-gradient(96deg, var(--act-tint-a), var(--act-tint-b) 52%, var(--act-tint-c)),
+      var(--act-bg);
+    border:1px solid var(--act-border);
+    backdrop-filter:blur(20px) saturate(180%);
+    -webkit-backdrop-filter:blur(20px) saturate(180%);
     box-shadow:
-      0 1px 0 rgba(255,255,255,.3) inset,
-      0 10px 28px -12px rgba(79,124,255,.9),
-      0 0 0 .5px rgba(120,150,255,.5);
-    transition:transform .15s ease, box-shadow .2s ease, background .25s ease;
+      0 1px 0 var(--act-border-hi) inset,
+      0 -1px 0 rgba(0,0,0,.10) inset,
+      0 10px 26px -16px var(--act-shadow);
+    transition:transform .15s ease, background .2s ease, border-color .2s ease;
     -webkit-user-select:none;user-select:none;
   }
-  .actBtn:active{transform:scale(.985)}
-
-  /* 进行中：按钮整体转为深色底，进度以高亮渐变从左侧推进，
-     对比明显，一眼能看出进度 */
-  .actFill{
-    position:absolute;top:0;left:0;bottom:0;width:0;
-    background:linear-gradient(96deg,#3fd8ff,#5b8cff 48%,#a97dff);
-    box-shadow:0 0 18px rgba(79,124,255,.65);
+  /* 顶部高光：模拟玻璃边缘反光 */
+  .actBtn::after{
+    content:"";position:absolute;top:0;left:8%;right:8%;height:1px;
+    background:linear-gradient(90deg,transparent,var(--act-border-hi),transparent);
     pointer-events:none;
   }
-  /* 进度前沿的亮边 */
-  .actFill::after{
-    content:"";position:absolute;top:0;right:-1px;bottom:0;width:3px;
-    background:#fff;
-    box-shadow:0 0 12px 2px rgba(255,255,255,.8);
+  .actBtn:active{transform:scale(.985)}
+  .actBtn:active::before{
+    content:"";position:absolute;inset:0;
+    background:var(--act-hover);pointer-events:none;z-index:0;
+  }
+
+  /* 进度：底部一条细亮线，长度即进度 */
+  .actFill{
+    position:absolute;left:0;right:auto;bottom:0;top:auto;
+    height:2px;width:0;
+    background:linear-gradient(90deg,var(--act-fill-a),var(--act-fill-b) 48%,var(--act-fill-c));
+    box-shadow:0 0 10px var(--act-fill-glow);
+    border-radius:0 2px 0 0;
+    pointer-events:none;
+    z-index:1;
   }
 
   .actRow{
-    position:relative;z-index:1;
+    position:relative;z-index:2;
     display:flex;align-items:center;justify-content:center;gap:8px;
   }
   .actLabel{
-    font-size:16px;font-weight:650;color:#fff;letter-spacing:.01em;
-    font-variant-numeric:tabular-nums;
+    font-size:16px;font-weight:650;color:var(--act-text);
+    letter-spacing:.01em;font-variant-numeric:tabular-nums;
   }
   .actPct{
-    font-size:13px;font-weight:600;color:rgba(255,255,255,.82);
+    font-size:13px;font-weight:600;color:var(--act-text-sub);
     font-variant-numeric:tabular-nums;letter-spacing:.02em;
   }
   .actPct:empty{display:none}
 
-  /* 进行中：去掉渐变，让进度填充成为主体 */
+  /* 进行中：玻璃变亮一点，进度线显形 */
   .actBtn.busy{
-    background:var(--inset-2);
-    box-shadow:
-      0 1px 0 var(--hair) inset,
-      0 0 0 .5px var(--inset-2),
-      0 8px 24px -16px rgba(79,124,255,.7);
+    background:
+      linear-gradient(96deg, var(--act-tint-a), var(--act-tint-b) 52%, var(--act-tint-c)),
+      var(--act-bg);
+    border-color:var(--act-border);
     cursor:default;
   }
+  /* 进行中：底部先铺一条淡轨道，进度线在其上推进 */
+  .actBtn.busy::before{
+    content:"";position:absolute;left:0;right:0;bottom:0;height:2px;
+    background:var(--act-track-line);
+    z-index:0;
+  }
   .actBtn.busy:active{transform:none}
+  .actBtn.busy:active::before{display:none}
 
-  /* 不可用（未选文件 / 校验中） */
+  /* 不可用 */
   .actBtn.disabled{
-    background:var(--inset-2);
-    color:var(--dimmer);
-    box-shadow:0 1px 0 var(--inset) inset;
+    background:var(--act-idle-bg);
+    border-color:var(--act-idle-border);
+    box-shadow:0 1px 0 rgba(255,255,255,.03) inset;
     cursor:default;pointer-events:none;
   }
-  .actBtn.disabled .actLabel{color:var(--dimmer)}
+  .actBtn.disabled .actLabel,
+  .actBtn.disabled .actPct{color:var(--act-idle-text)}
+  .actBtn.disabled::after{opacity:.3}
   .actBtn.disabled:active{transform:none}
-
 
   /* 次要操作：文字链样式，刻意做小并与主按钮拉开距离，避免误触 */
   .linkBtn{
@@ -413,7 +483,7 @@
   .bar{
     height:5px;border-radius:99px;overflow:hidden;margin:14px 0 10px;
     background:var(--inset-2);
-    box-shadow:0 1px 2px rgba(0,0,0,.4) inset;
+    box-shadow:0 1px 2px var(--bar-inset) inset;
   }
   .bar>i{
     display:block;height:100%;width:0;border-radius:99px;
@@ -559,7 +629,7 @@
     flex:0 0 auto;padding:9px 16px;border:0;border-radius:11px;
     background:linear-gradient(96deg,#2fb8ff,#4f7cff 46%,#8f5cff);
     color:#fff;font:inherit;font-size:13.5px;font-weight:650;cursor:pointer;
-    box-shadow:0 1px 0 rgba(255,255,255,.3) inset,0 8px 20px -10px rgba(79,124,255,.9);
+    box-shadow:0 1px 0 rgba(255,255,255,.3) inset,0 8px 20px -10px var(--btn-glow);
   }
 </style>
 </head>
