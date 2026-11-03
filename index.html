@@ -51,7 +51,8 @@
     --drop-b:rgba(157,107,255,.055);
     --drop-c:rgba(255,255,255,.022);
     --drop-sheen:rgba(255,255,255,.07);
-    --drop-border:rgba(255,255,255,.16);
+    --drop-border:rgba(255,255,255,.13);
+    --drop-outline:rgba(255,255,255,.05);
     --drop-shadow:rgba(0,0,0,.9);
     --card-lo:rgba(0,0,0,.22);           /* 卡片底部阴影 */
     --shadow:rgba(0,0,0,.95);
@@ -107,7 +108,8 @@
       --drop-b:rgba(226,222,250,.98);
       --drop-c:rgba(252,253,255,.99);
       --drop-sheen:rgba(255,255,255,.16);
-      --drop-border:rgba(70,110,180,.28);
+      --drop-border:rgba(96,126,175,.42);
+      --drop-outline:rgba(96,126,175,.16);
       --drop-shadow:rgba(30,45,80,.12);
     }
   }
@@ -187,17 +189,20 @@
   /* ── 拖放区 ── */
   .drop{
     position:relative;overflow:hidden;
-    border:1.5px dashed var(--drop-border);
+    border-width:1px;
+    border-style:solid;
+    border-color:var(--drop-border);
     border-radius:var(--r-lg);
     padding:34px 18px 30px;
     text-align:center;cursor:pointer;
     background:linear-gradient(168deg,var(--drop-a),var(--drop-b) 58%,var(--drop-c));
     backdrop-filter:blur(28px) saturate(170%);
     -webkit-backdrop-filter:blur(28px) saturate(170%);
-    /* 只保留外投影。
-       原先还有 0 1px 0 白 / 0 -1px 0 暗 两条 inset，
-       在浅色下会和虚线边框贴在一起，形成多道横线。 */
-    box-shadow: 0 16px 40px -24px var(--drop-shadow);
+    /* 外投影 + 极淡外描边（帮助浅色下轮廓更清晰），
+       不再使用 inset 线条，避免出现多道横线。 */
+    box-shadow:
+      0 16px 40px -24px var(--drop-shadow),
+      0 0 0 .5px var(--drop-outline);
     transition:transform .18s cubic-bezier(.22,.9,.28,1), border-color .2s, box-shadow .2s;
     margin-bottom:13px;
   }
