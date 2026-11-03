@@ -539,6 +539,12 @@
   .note:empty{display:none}
   .save{font-size:11.5px;color:var(--dimmer);text-align:center;margin-top:9px;line-height:1.6}
   .save:empty{display:none}
+  /* 折叠过渡：仅 JS 添加 .collapsing 时生效 */
+  .card.collapsing{
+    transition: height .28s cubic-bezier(.4,0,.2,1),
+                margin-bottom .28s cubic-bezier(.4,0,.2,1),
+                opacity .22s ease !important;
+  }
   .hide{display:none!important}
 
   footer{
@@ -827,59 +833,75 @@ function showCard(id){
   const el = $(id);
   el.classList.remove('hide');
   el.classList.remove('enter');
-  // 入场动画用 Web Animations（fill:none，不推进也不会残留透明态）
-  if (el.animate && !el.classList.contains('noAnim')) {
-    try {
-      const a = el.animate(
-        [
-          { opacity: 0, transform: 'translateY(8px)' },
-          { opacity: 1, transform: 'none' }
-        ],
-        { duration: 260, easing: 'cubic-bezier(.22,.9,.28,1)', fill: 'none' }
-      );
-      a.onfinish = () => { el.style.opacity = ''; el.style.transform = ''; };
-      setTimeout(() => { try { a.finish(); } catch (e) {} }, 400);
-    } catch (e) {}
-  }
+
+  // 入场：与折叠同思路，用定时器分步写样式，保证在本环境也能看到效果。
+  const STEPS = 7;
+  const DUR = 240;
+  let i = 0;
+  el.style.opacity = '0';
+  el.style.transform = 'translateY(8px)';
+
+  const tick = () => {
+    i++;
+    const t = i / STEPS;
+    const e = 1 - Math.pow(1 - t, 3);
+    el.style.opacity = String(e);
+    el.style.transform = `translateY(${(8 * (1 - e)).toFixed(2)}px)`;
+    if (i < STEPS) {
+      setTimeout(tick, DUR / STEPS);
+    } else {
+      el.style.opacity = '';
+      el.style.transform = '';
+    }
+  };
+  setTimeout(tick, DUR / STEPS);
 }
 
-function hideCard(id, animate = true){
+function hideCard(id, animate = true, onDone){
   const el = $(id);
-  if (!animate || !el.animate || el.classList.contains('hide')) {
+  const finish = () => { if (typeof onDone === 'function') onDone(); };
+  if (!animate || el.classList.contains('hide')) {
     el.classList.add('hide');
+    finish();
     return;
   }
-  // 先测量当前高度，做成折叠动画，让下方内容平滑上移
-  const h = el.offsetHeight;
-  el.style.height = h + 'px';
-  el.style.overflow = 'hidden';
-  el.style.marginBottom = getComputedStyle(el).marginBottom;
-  el.classList.add('noAnim');
 
-  try {
-    const a = el.animate(
-      [
-        { height: h + 'px', opacity: 1, marginBottom: getComputedStyle(el).marginBottom },
-        { height: '0px', opacity: 0, marginBottom: '0px' }
-      ],
-      { duration: 240, easing: 'cubic-bezier(.4,0,.2,1)', fill: 'none' }
-    );
-    const done = () => {
+  // 折叠：分步改高度。
+  // 本环境的 rAF / Web Animations / CSS transition 都可能不推进（合成器时间冻结），
+  // 因此这里用定时器逐帧写样式，只要 JS 计时器在跑就一定能平滑收起。
+  const h = el.offsetHeight;
+  const mb = parseFloat(getComputedStyle(el).marginBottom) || 0;
+  const STEPS = 7;
+  const DUR = 210;
+
+  el.style.overflow = 'hidden';
+  el.classList.add('collapsing');
+
+  let i = 0;
+  const tick = () => {
+    i++;
+    const t = i / STEPS;
+    // ease-out：起步快、收尾缓
+    const e = 1 - Math.pow(1 - t, 3);
+    el.style.height = Math.round(h * (1 - e)) + 'px';
+    el.style.marginBottom = Math.round(mb * (1 - e)) + 'px';
+    el.style.opacity = String(1 - e * 0.9);
+
+    if (i < STEPS) {
+      setTimeout(tick, DUR / STEPS);
+    } else {
+      el.classList.remove('collapsing');
       el.classList.add('hide');
-      el.style.cssText = el.style.cssText
-        .replace(/height:[^;]*;?/g, '')
-        .replace(/overflow:[^;]*;?/g, '')
-        .replace(/margin-bottom:[^;]*;?/g, '');
-      el.classList.remove('noAnim');
-    };
-    a.onfinish = done;
-    // 兜底：动画若未推进，450ms 后强制收尾
-    setTimeout(() => { if (!el.classList.contains('hide')) done(); }, 450);
-  } catch (e) {
-    el.classList.add('hide');
-    el.style.cssText = '';
-    el.classList.remove('noAnim');
-  }
+      el.style.height = '';
+      el.style.marginBottom = '';
+      el.style.overflow = '';
+      el.style.opacity = '';
+      finish();
+    }
+  };
+  el.style.height = h + 'px';
+  el.style.marginBottom = mb + 'px';
+  setTimeout(tick, DUR / STEPS);
 }
 // 进度区不是 .card，单独显隐
 // 一体化按钮的三种状态：可用 / 进行中 / 不可用
@@ -1150,18 +1172,17 @@ async function startConvert() {
     $('rTime').textContent = `用时 ${elapsed.toFixed(1)} 秒`;
     $('status').textContent = '';
 
-    // 交接顺序：结果卡先入场（在源文件卡下方），随后源文件卡折叠收起，
-    // 视觉上像结果"接替"了输入区，而不是凭空跳变。
-    showCard('resultCard');
-    // 注意：本环境 requestAnimationFrame 不触发，只能用定时器
-    setTimeout(() => {
-      hideCard('infoCard');
+    // 交接改为串行：先把源文件卡折叠收起，腾出空间后再展开结果卡。
+    // 两件事同时做会让布局连跳两次，看起来生硬。
+    // 注意：本环境 requestAnimationFrame 不触发，只能用定时器。
+    hideCard('infoCard', true, () => {
+      showCard('resultCard');
       setTimeout(() => {
         try {
           $('resultCard').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         } catch (e) {}
-      }, 240);
-    }, 120);
+      }, 160);
+    });
   } catch (e) {
     console.error(e);
     setBtnState('idle', '重新压缩');
