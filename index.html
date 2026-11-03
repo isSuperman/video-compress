@@ -312,15 +312,21 @@
   .actBtn.disabled:active{transform:none}
 
 
-  button.ghost{
-    width:100%;padding:13px;margin-top:9px;
-    border:1px solid var(--line);border-radius:var(--r-md);
-    background:rgba(255,255,255,.035);color:var(--text);
-    font:inherit;font-size:14.5px;cursor:pointer;
-    backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
-    transition:.16s;
+  /* 次要操作：文字链样式，刻意做小并与主按钮拉开距离，避免误触 */
+  .linkBtn{
+    display:flex;align-items:center;justify-content:center;gap:6px;
+    margin:18px auto 2px;padding:8px 14px;
+    border:0;background:transparent;
+    color:var(--dimmer);font:inherit;font-size:13px;
+    cursor:pointer;border-radius:10px;
+    transition:color .15s, background .15s;
   }
-  button.ghost:active{background:rgba(255,255,255,.08)}
+  .linkBtn svg{
+    width:14px;height:14px;fill:none;stroke:currentColor;
+    stroke-width:2;stroke-linecap:round;stroke-linejoin:round;
+    opacity:.8;
+  }
+  .linkBtn:active{color:var(--dim);background:rgba(255,255,255,.045)}
 
   /* ── 进度 ── */
   .bar{
@@ -561,7 +567,13 @@
   <div class="spec" id="result"></div>
   <button class="primary" id="download" style="margin-top:14px">保存到相册</button>
   <div class="save" id="saveHint"></div>
-  <button class="ghost" id="again">处理另一个视频</button>
+  <button class="linkBtn" id="again">
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M4 12a8 8 0 1 0 2.4-5.7"/>
+      <path d="M4 5v4.5h4.5"/>
+    </svg>
+    处理另一个视频
+  </button>
 </div>
 
 <footer>
