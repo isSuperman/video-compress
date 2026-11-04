@@ -32,6 +32,7 @@ CSS_LINK_MARK = '<!--CSS-->'
 JS_LINK_MARK = '<!--APPJS-->'
 GLASS_MARK = '<!--GLASS-->'
 UI_MARK = '/*UI_SCRIPTS*/[]/*/UI_SCRIPTS*/'
+LG_CSS_MARK = '/* === 液态玻璃层（glass/lg.css，构建时合入） === */'
 UI_MARK_CLIENT = UI_MARK
 
 
@@ -97,7 +98,12 @@ def main():
         for fn in sorted(os.listdir(GLASS)):
             body = open(os.path.join(GLASS, fn), encoding='utf-8').read()
             if fn.endswith('.css'):
-                css = css.rstrip() + '\n\n' + body
+                # 只拼一次：用「这段样式里特有的第一条规则」判断是否已经合过。
+                # 不能用自建标记判断——反复构建时标记会被旧版本带走，
+                # 导致同一份 lg.css 被重复拼接（曾累积到 6 份）。
+                signature = body.strip().split('\n')[0].strip()
+                if signature not in css:
+                    css = css.rstrip() + '\n\n' + body
             elif fn.endswith('.js') and fn != 'lg-boot.js':
                 wiring.append('./' + emit(fn[:-3], body, 'js'))
     boot_body = open(os.path.join(GLASS, 'lg-boot.js'), encoding='utf-8').read()

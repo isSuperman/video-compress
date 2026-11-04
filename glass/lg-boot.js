@@ -145,7 +145,17 @@
   /* ---------- 叠放与尺寸 ---------- */
   function styleHost(host) {
     var el = host.querySelector('liquid-glass');
-    if (!el) return null;
+    if (!el) {
+      // 宿主在 HTML 里是空的（组件由 JS 建），缺了要补上
+      el = document.createElement('liquid-glass');
+      if (host.getAttribute('data-lg-control')) {
+        // 控件类宿主：mode 必须挂载前就设好，否则会先按默认值画一帧
+        el.setAttribute('mode', host.getAttribute('data-lg') === 'q' ? 'single-slider' : 'buttons');
+      } else {
+        el.setAttribute('mode', 'scroll-container');
+      }
+      host.appendChild(el);
+    }
     // 覆盖式宿主不是控件，用"单开关"的首层来做纯玻璃（其余层是空白，不会多画东西）
     if (!host.getAttribute('data-lg-control')) {
       // 卡片玻璃与覆盖式玻璃都用 scroll-container：它只画玻璃卡片，
@@ -160,6 +170,8 @@
   // 覆盖式宿主（选择区 / 压缩按钮）高度必须由实测像素决定：
   // 高度为 auto 时绝对定位的子元素会量出 0，组件就永远不画。
   function placeOverlayHosts() {
+    // 覆盖式宿主的高度必须用实测像素写死：WebGL 画布在尺寸为 0 时不会绘制。
+    // start 的宿主在按钮内部（inset:0 定位），高度取按钮自身。
     var map = { drop: '#drop', start: '#start' };
     Object.keys(map).forEach(function (k) {
       var host = document.querySelector('.lgHost[data-lg="' + k + '"]');

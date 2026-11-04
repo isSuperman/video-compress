@@ -73,6 +73,9 @@
 
 /* ── 2. 卡片：内插一层玻璃，卡片内容压在上面 ── */
 .lg-on .card {
+  /* 卡片必须是定位上下文：里面的玻璃宿主都是 position:absolute，
+     否则会以更外层的祖先为参照，跑到错误的位置上。 */
+  position: relative;
   /* 玻璃本身半透明，卡片再垫一层很薄的底色：
      既保证正文可读，也让不支持 backdrop-filter 的环境不发虚 */
   background: var(--glass);
@@ -90,14 +93,8 @@
 }
 
 /* ── 3. 压缩按钮：玻璃垫在按钮下面，进度线仍在按钮内 ── */
-.lg-on #startGlass {
-  position: relative;
-  z-index: 0;
-  margin-top: 16px;
-  /* 覆盖式宿主不占布局高度：让后面的压缩按钮回到原位 */
-  margin-bottom: -71px;
-  height: 71px;
-}
+/* 宿主是绝对定位的（见上面的 data-lg="start" 规则），不占布局高度，
+   高度由 lg-boot.js 按按钮实测像素写入，不需要负边距。 */
 .lg-on .actBtn {
   position: relative;
   z-index: 6;
@@ -175,8 +172,7 @@
 
 /* ── 覆盖式玻璃：宿主绝对定位盖住目标元素，高度由 JS 实测写入 ──
    画布铺满整个宿主，点击穿透到下面的 HTML 控件。 */
-.lg-on .lgHost[data-lg="drop"],
-.lg-on .lgHost[data-lg="start"] {
+.lg-on .lgHost[data-lg="drop"] {
   position: absolute;
   top: 0;
   left: 0;
@@ -185,6 +181,19 @@
   pointer-events: none; /* 点击穿透到下面的 HTML 控件 */
   background: transparent;
   border-radius: var(--r-lg, 22px);
+}
+
+/* 压缩按钮里的玻璃宿主：按钮本身就是定位上下文，直接铺满即可，
+   不依赖任何外部尺寸计算。 */
+.lg-on .actBtn > .lgHost[data-lg="start"] {
+  position: absolute;
+  inset: 0;
+  /* 组件画布是 WebGL，需要确定的 CSS 像素尺寸；百分比在测量阶段会读到 0，
+     所以由 lg-boot.js 按按钮实测尺寸写入 width/height（见 placeOverlayHosts）。 */
+  z-index: 1;            /* 在按钮内容（z-index 2）之下 */
+  pointer-events: none;
+  border-radius: var(--r-md, 16px);
+  background: transparent;
 }
 /* ---- 页面被"玻璃盖子"罩住时，文字必须从玻璃里透出来 ----
    做法：文字层浮到玻璃之上，颜色用差量混合，深底仍然白字、浅底仍然黑字。 */
