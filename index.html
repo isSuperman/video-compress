@@ -32,7 +32,7 @@
 <meta name="apple-mobile-web-app-title" content="MC作业">
 <meta name="application-name" content="MC作业">
 <meta name="format-detection" content="telephone=no">
-<link rel="stylesheet" href="./assets/style.927e44406f.css">
+<link rel="stylesheet" href="./assets/style.68baf272bf.css">
 <script>
 /* 主题：在首帧前把上次选的主题写上，避免闪烁。
    没存过就跟随系统（不写 data-theme）。默认深色，和页面原本的版式一致。 */
@@ -46,6 +46,19 @@
   } catch (e) {
     document.documentElement.setAttribute('data-theme', 'dark');
   }
+})();
+</script>
+<script id="theme-boot">
+/* 主题三态：跟随系统 / 手动深色 / 手动浅色。
+   在首个样式表之前执行，把实际主题写到 data-applied，避免首帧闪一下。 */
+(function () {
+  var d = document.documentElement;
+  var saved = null;
+  try { saved = localStorage.getItem('vmc-theme'); } catch (e) {}
+  var sysLight = window.matchMedia('(prefers-color-scheme: light)').matches;
+  var theme = (saved === 'light' || saved === 'dark') ? saved : (sysLight ? 'light' : 'dark');
+  d.setAttribute('data-applied', theme);
+  d.setAttribute('data-theme', theme);   /* 玻璃层读这个 */
 })();
 </script>
 </head>
@@ -174,6 +187,6 @@
   </div>
 </footer>
 
-<script type="module" src="./assets/app.1952753121.js"></script>
+<script type="module" src="./assets/app.5f1f2f01e8.js"></script>
 </body>
 </html>

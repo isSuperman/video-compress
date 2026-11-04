@@ -40,7 +40,10 @@
   /* ---------- 分辨率：按钮组 ---------- */
   // 按钮组没有"选中项"API：选中的那档用库自带的蓝色填充（style:'blue'），
   // 其余用玻璃面（'surface'）。切换时一次性重设整组，只重建一次不闪。
-  var res = host('res', 'buttons', 3 * 52, '1');
+  // 按钮组会在画布底部留一条导航栏（约 32px），按钮从顶部往下排。
+  // 只按「按钮数 × 高度」给宿主会让最后一个按钮压到导航栏上、溢出宿主，
+  // 溢出的部分会盖住下面的画质和压缩按钮，所以底部留白也要算进去。
+  var res = host('res', 'buttons', 3 * 64 + 40, '1');
   if (res) {
     var ids = hooks.resolutions.map(function (t) { return t.id; });
     var active = hooks.currentRes();

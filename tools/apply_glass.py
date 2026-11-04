@@ -8,12 +8,18 @@ P = ROOT + 'index.html'
 s = open(P, encoding='utf-8').read()
 
 def once(a, b, why):
+    """把 a 换成 b，且只做一次。
+
+    用 b 的首行作为「已插入标记」判重。不能用「a 不存在」来判断：
+    b 往往以 a 的片段开头，那样会永远误判成没改过，导致重复插入
+    （之前 start 宿主被插成 4 份就是这么来的）。
+    """
     global s
-    n = s.count(a)
-    if n == 0 and b in s:
-        return  # 已经改过
-    if n != 1:
-        sys.exit('锚点不唯一(%d): %s' % (n, why))
+    marker = b.strip().splitlines()[0].strip()
+    if marker and marker in s:
+        return
+    if s.count(a) != 1:
+        sys.exit('锚点不唯一(%d): %s' % (s.count(a), why))
     s = s.replace(a, b)
 
 # 1. 预热连接

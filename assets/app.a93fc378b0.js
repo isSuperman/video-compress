@@ -1,8 +1,6 @@
 
 
 
-
-
 const $ = id => document.getElementById(id);
 
 /* ---------- 懒加载 mediabunny ---------- */
@@ -207,8 +205,6 @@ function setBtnState(state, label) {
   const b = $('start');
   b.classList.toggle('disabled', state === 'disabled');
   b.classList.toggle('busy', state === 'busy');
-  // 压缩进行中彻底关掉交互：连点在视觉和事件两层面都拿不到反馈
-  b.setAttribute('aria-disabled', state === 'busy' || state === 'disabled' ? 'true' : 'false');
   if (label != null) $('actLabel').textContent = label;
   if (state === 'idle') {
     $('bar').style.width = '0%';
@@ -217,12 +213,13 @@ function setBtnState(state, label) {
 }
 
 /* ---------- 液态玻璃（渐进增强，失败不影响主流程） ---------- */
-// 组件库约 340KB（CDN 上 br 后约 100KB），首屏完全用不上，
-// 所以放在页面 load 之后的下一个空闲时段才注入，再按需加载本站的接线脚本。
-// 不允许主流程等它：任何环节失败都只是退回原来的 HTML 控件。
-// 必须走本站域名：线上页面带 COEP: require-corp（WebCodecs 多线程需要），
-// 而 CDN 的 liquid-glass.js 没有 Cross-Origin-Resource-Policy 头，浏览器会直接拒载。
-// 文件在 lib/liquid-glass.js（v2.5，417KB），升级时替换它并改这里的版本号。
+// 组件库约 417KB（br 后约 100KB），首屏完全用不上，
+// 所以放在页面 load 之后的下一个空闲时段才注入，再挂本站的适配层。
+// 任何环节失败都只是退回原来的 HTML 控件，不影响压缩功能。
+//
+// 注意：必须走本站 ./lib/ 而不是 CDN。线上页面带 COEP: require-corp
+// （WebCodecs 多线程需要），而 CDN 的 liquid-glass.js 没有
+// Cross-Origin-Resource-Policy 头，浏览器会直接拒载，组件永远注册不上。
 const GLASS_SRC = './lib/liquid-glass.js?v=2.5';
 let glassPromise = null;
 
@@ -231,20 +228,18 @@ function loadGlass() {
   glassPromise = new Promise(resolve => {
     // 省流模式下不拉额外资源，直接用轻量界面
     if (navigator.connection && navigator.connection.saveData) return resolve(false);
-
     if (customElements.get('liquid-glass')) return mountGlass(resolve);
 
     const s = document.createElement('script');
     s.src = GLASS_SRC;
     s.onload = () => mountGlass(resolve);
-    // CDN 挂掉时不重试、不卡流程，页面维持原生外观
     s.onerror = () => resolve(false);
     document.head.appendChild(s);
   });
   return glassPromise;
 }
 
-// 库就绪后再挂我们的适配层：它负责给每块玻璃喂背景壁纸、补渲染、
+// 库就绪后挂适配层：它负责给每块玻璃喂背景壁纸、补渲染，
 // 并在末尾按序注入接线层（lg-app）。
 function mountGlass(resolve) {
   const s = document.createElement('script');
@@ -263,7 +258,7 @@ window.addEventListener('load', () => setTimeout(() => {
   else setTimeout(bootGlass, 800);
 }, 400));
 
-// 适配层脚本路径，由 tools/split.py 在构建时填入
+// 适配层路径由 tools/split.py 在构建时填入
 const GLASS_BOOT = './assets/lg-boot.ec7d149724.js';
 
 
@@ -470,8 +465,8 @@ $('start').addEventListener('keydown', e => {
 });
 
 // 压缩进行中的硬开关。
-// 以前这里只拦 disabled，busy 状态没拦——连点两次会并行跑两个 conversion，
-// 两个 onProgress 交替写进度条和百分比，界面上就出现重影/跳动的进度文本。
+// 以前只拦 disabled，busy 状态没拦——连点两次会并行跑两个 conversion，
+// 两个 onProgress 交替写进度条和百分比，界面上出现重影/跳动的进度文本。
 let converting = false;
 
 async function startConvert() {
@@ -595,7 +590,6 @@ async function startConvert() {
     $('status').classList.remove('hide');
     $('status').textContent = '失败：' + (e && e.message ? e.message : String(e));
   } finally {
-    converting = false;
     // 失败时按钮要回到可点状态；成功时卡片已隐藏，无需处理
     const b = $('start');
     if (b.classList.contains('busy')) {
@@ -659,7 +653,5 @@ $('again').addEventListener('click', () => {
   $('saveTag').style.background = '';
   window.scrollTo({ top: 0, behavior: 'smooth' });
 });
-
-
 
 
