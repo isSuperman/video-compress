@@ -203,6 +203,9 @@ function setBtnState(state, label) {
   const b = $('start');
   b.classList.toggle('disabled', state === 'disabled');
   b.classList.toggle('busy', state === 'busy');
+  // 内联样式优先级最高：压缩中直接断掉指针事件，不依赖 CSS 类是否命中
+  b.style.pointerEvents = (state === 'busy' || state === 'disabled') ? 'none' : '';
+  b.setAttribute('aria-disabled', (state === 'busy' || state === 'disabled') ? 'true' : 'false');
   if (label != null) $('actLabel').textContent = label;
   if (state === 'idle') {
     $('bar').style.width = '0%';
@@ -389,6 +392,17 @@ function targetSize(w, h, maxDim) {
 }
 
 /* ---------- 开始压缩 ---------- */
+// 捕获阶段先拦一道：压缩中（或按钮不可用）时直接吞掉点击，
+// 连点、辅助技术触发、程序化 .click() 都挡得住，不依赖 CSS。
+document.addEventListener('click', e => {
+  const b = e.target && e.target.closest && e.target.closest('#start');
+  if (!b) return;
+  if (converting || b.classList.contains('busy') || b.classList.contains('disabled')) {
+    e.preventDefault();
+    e.stopImmediatePropagation();
+  }
+}, true);
+
 $('start').addEventListener('click', startConvert);
 // div 模拟按钮，补上键盘触发
 $('start').addEventListener('keydown', e => {
