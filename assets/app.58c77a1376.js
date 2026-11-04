@@ -4,7 +4,15 @@ const $ = id => document.getElementById(id);
 /* ---------- 懒加载 mediabunny ---------- */
 // 这个包压缩后约 190KB，之前用同步 <script> 放在页面前面，会阻塞首屏渲染。
 // 现在改成用户选了视频（或即将压缩）时才注入，首屏只付 HTML+CSS 的成本。
+//
+// 预取策略：解析 <head> 里的 prefetch 只写进 HTTP 缓存，脚本还是要等注入那一刻
+// 才真正执行。所以这里在首屏 load 之后（此时 <head> 的 prefetch 多半已经下完）
+// 直接把同一个 URL 的脚本注入执行——命中缓存，几乎瞬时完成。
+// 这样用户点「选择视频」→ 从相册里挑片子（通常好几秒）的这段时间里，
+// 编码库早就编译好了，选完立刻就能出预览，不必再等它下载+解析。
+// 代价只是首屏之后多解析一个 190KB 的脚本，不影响首屏任何指标。
 let mbPromise = null;
+let mbPreloaded = false;
 function loadMB() {
   if (window.Mediabunny) return Promise.resolve(window.Mediabunny);
   if (!mbPromise) {
@@ -21,6 +29,24 @@ function loadMB() {
   }
   return mbPromise;
 }
+
+// 首屏彻底空闲后再预加载，失败静默（真正需要时 loadMB 会重试）
+function preloadMBWhenIdle() {
+  if (mbPreloaded || window.Mediabunny) return;
+  mbPreloaded = true;
+  const go = () => {
+    const conn = navigator.connection;
+    // 省流模式下不动，避免无谓消耗
+    if (conn && conn.saveData) return;
+    loadMB().catch(() => {});
+  };
+  if ('requestIdleCallback' in window) {
+    requestIdleCallback(go, { timeout: 3000 });
+  } else {
+    setTimeout(go, 1200);
+  }
+}
+window.addEventListener('load', () => setTimeout(preloadMBWhenIdle, 600));
 
 let srcFile = null, srcInfo = null, lastBlob = null, lastName = '';
 let selRes = 1080, selQ = 4;
@@ -209,6 +235,21 @@ fileInput.addEventListener('change', e => {
 ['pointerdown', 'focus'].forEach(t =>
   fileInput.addEventListener(t, () => { loadMB().catch(() => {}); }, { once: true }));
 
+/* ---------- 源视频可解码性 ---------- */
+// 只读取轨道首帧的解码配置，判断浏览器能否直接解码；
+// 不做整轨扫描，因此大文件/长视频的门槛成本恒定在几十毫秒内。
+async function sourceDecodable() {
+  const cfg = await srcInfo.vTrack.getDecoderConfig();
+  if (!cfg || !cfg.codec) return { ok: true, unknown: true };
+  try {
+    const r = await VideoDecoder.isConfigSupported(cfg);
+    return { ok: !!r.supported };
+  } catch (e) {
+    // 配置本身描述不出来时，交给真正的压缩流程去报错，避免误伤
+    return { ok: true, unknown: true };
+  }
+}
+
 function fmtTime(s) {
   const m = Math.floor(s/60), sec = Math.floor(s%60);
   return `${m}:${String(sec).padStart(2,'0')}`;
@@ -285,24 +326,16 @@ async function loadFile(f) {
       $('srcWarn').textContent = '该视频没有音轨，压缩后的文件也不会有声音。';
     }
 
-    // 预检：确认源编码可解码
-    const testOutput = new mb.Output({
-      format: new mb.Mp4OutputFormat(),
-      target: new mb.BufferTarget()
-    });
-    const probe = await mb.Conversion.init({
-      input, output: testOutput,
-      video: { codec: 'avc', bitrate: 2500000 },
-      audio: srcInfo.hasAudio
-        ? { codec: 'aac', bitrate: 128000 }
-        : { discard: true }
-    });
-    const dropped = (probe.discardedTracks || [])
-      .filter(t => t.reason !== 'discarded_by_user');
-    if (!probe.isValid || dropped.length) {
-      const why = dropped.map(t => t.reason).join(', ') || '配置无效';
+    // 可解码性检查。
+    // 以前这里跑一次完整 Conversion.init 做预检，但 init 会遍历整条轨道的
+    // packet 索引（为了算 maximumPacketCount 之类），视频越长越慢：
+    // 长片/大文件在选片阶段要多等好几秒，而这些信息真正压缩时还会再算一遍。
+    // 现在只问浏览器要轨道首帧的解码配置（getDecoderConfig 只做一次寻址），
+    // 再用 VideoDecoder.isConfigSupported() 判断——耗时与视频长度、体积都无关。
+    const check = await sourceDecodable();
+    if (!check.ok) {
       $('srcWarn').textContent =
-        `此视频的编码（${String(srcInfo.codec).toUpperCase()}）无法被浏览器直接解码（${why}）。` +
+        `此视频的编码（${String(srcInfo.codec).toUpperCase()}）无法被浏览器直接解码。` +
         `请换用手机原始拍摄的视频，或先用其他工具转成 H.264 / HEVC 再试。`;
       return;
     }
@@ -412,7 +445,11 @@ async function startConvert() {
 
     if (!conversion.isValid) {
       const why = (conversion.discardedTracks || []).map(t => t.reason).join(', ');
-      throw new Error('无法配置此转换：' + (why || '未知原因'));
+      // 源编码解不了是这里最常见的失败原因，给出可操作的建议
+      const undecodable = String(why).includes('decodable');
+      throw new Error(undecodable
+        ? '当前浏览器无法解码这段视频的编码，请换用手机直接拍摄的视频，或先转成 H.264 / HEVC'
+        : '无法配置此转换：' + (why || '未知原因'));
     }
 
     conversion.onProgress = p => {
