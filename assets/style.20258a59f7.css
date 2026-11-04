@@ -397,10 +397,15 @@
     z-index:1;
   }
 
+  /* 按钮文字区：只排一层。标题与百分比在同一个行内流里，
+     不会因为任何状态更新而叠出第二行。 */
   .actRow{
     position:relative;z-index:2;
-    display:flex;align-items:center;justify-content:center;gap:8px;
+    display:flex;flex-wrap:nowrap;
+    align-items:center;justify-content:center;gap:8px;
+    height:22px;line-height:22px;overflow:hidden;
   }
+  .actLabel,.actPct{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .actLabel{
     font-size:16px;font-weight:650;color:var(--act-text);
     letter-spacing:.01em;font-variant-numeric:tabular-nums;
