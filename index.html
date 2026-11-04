@@ -18,13 +18,6 @@
 <link rel="preconnect" href="https://video-compress-8uy.pages.dev" crossorigin>
 <link rel="prefetch" href="./lib/mediabunny.bundle.js" as="script">
 
-<!-- 液态玻璃：库文件在本站 lib/ 下，页面 load 后才注入（见 JS 里的 loadGlass） -->
-
-<!-- 液态玻璃：库文件在本站 lib/ 下，页面 load 后才注入（见 JS 里的 loadGlass） -->
-
-<!-- 液态玻璃：库文件在本站 lib/ 下，页面 load 后才注入（见 JS 里的 loadGlass） -->
-
-
 <!-- 添加到主屏幕：以独立应用方式启动，全屏无 Safari 界面 -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -32,35 +25,7 @@
 <meta name="apple-mobile-web-app-title" content="MC作业">
 <meta name="application-name" content="MC作业">
 <meta name="format-detection" content="telephone=no">
-<link rel="stylesheet" href="./assets/style.b98dae224b.css">
-<script>
-/* 主题：在首帧前把上次选的主题写上，避免闪烁。
-   没存过就跟随系统（不写 data-theme）。默认深色，和页面原本的版式一致。 */
-(function () {
-  try {
-    var t = localStorage.getItem('vmc-theme');
-    if (t !== 'light' && t !== 'dark') {
-      t = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
-    }
-    document.documentElement.setAttribute('data-theme', t);
-  } catch (e) {
-    document.documentElement.setAttribute('data-theme', 'dark');
-  }
-})();
-</script>
-<script id="theme-boot">
-/* 主题三态：跟随系统 / 手动深色 / 手动浅色。
-   在首个样式表之前执行，把实际主题写到 data-applied，避免首帧闪一下。 */
-(function () {
-  var d = document.documentElement;
-  var saved = null;
-  try { saved = localStorage.getItem('vmc-theme'); } catch (e) {}
-  var sysLight = window.matchMedia('(prefers-color-scheme: light)').matches;
-  var theme = (saved === 'light' || saved === 'dark') ? saved : (sysLight ? 'light' : 'dark');
-  d.setAttribute('data-applied', theme);
-  d.setAttribute('data-theme', theme);   /* 玻璃层读这个 */
-})();
-</script>
+<link rel="stylesheet" href="./assets/style.e7f3896645.css">
 </head>
 <body>
 
@@ -80,15 +45,7 @@
   <div class="sub">本地硬件编码，文件不会上传到任何服务器</div>
 </header>
 
-<button class="lgThemeBtn" id="lgThemeBtn" type="button" aria-label="切换深色/浅色" hidden>
-  <svg class="iMoon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg>
-  <svg class="iSun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M2.6 12h2.2M19.2 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M18.7 5.3l-1.6 1.6M6.9 17.1l-1.6 1.6"/></svg>
-</button>
-
-<!-- 选择视频：原交互区保留（点击/拖拽/无障碍），玻璃垫在它后面 -->
-<div class="dropWrap">
-  <div class="lgHost" data-lg="drop"></div>
-  <div class="drop" id="drop">
+<div class="drop" id="drop">
   <div class="ring">
     <svg viewBox="0 0 24 24">
       <rect x="2.5" y="6" width="13" height="12" rx="2.6"/>
@@ -98,7 +55,6 @@
   <div class="t">选择视频</div>
   <div class="hint">或把文件拖进来 · MP4 / MOV / WebM</div>
   <input type="file" id="file" accept="video/*">
-  </div>
 </div>
 
 <div class="card hide" id="infoCard">
@@ -108,10 +64,7 @@
 
   <div class="divider"></div>
 
-  <div class="lgRowHead lgBlock"><span class="k">分辨率</span><span class="v" id="lgResVal">1080p</span></div>
-  <!-- 液态玻璃按钮组：库不可用时（html 上没有 .lg-on）自动退回下面的 HTML 胶囊 -->
-  <div class="lgHost lgBlock" data-lg="res" data-lg-control="1"></div>
-  <div class="optRow lgReplaced" id="resRow">
+  <div class="optRow">
     <span class="optKey">分辨率</span>
     <div class="chips" id="resOpts">
       <button class="chip on" data-res="1080">1080p</button>
@@ -120,9 +73,7 @@
     </div>
   </div>
 
-  <div class="lgRowHead lgBlock"><span class="k">画质</span><span class="v" id="lgQVal">4 Mbps</span></div>
-  <div class="lgHost lgBlock" data-lg="q" data-lg-control="1"></div>
-  <div class="optRow lgReplaced">
+  <div class="optRow">
     <span class="optKey">画质</span>
     <div class="slideWrap">
       <input type="range" id="qRange" min="0" max="2" step="1" value="1"
@@ -138,7 +89,6 @@
 
   <!-- 压缩按钮 + 进度：同一个容器内，进度沿按钮底边推进 -->
   <div class="actBtn" id="start" role="button" tabindex="0">
-    <div class="lgHost" data-lg="start"></div>
     <div class="actFill" id="bar"></div>
     <div class="actRow">
       <span class="actLabel" id="actLabel">开始压缩</span>
@@ -187,6 +137,6 @@
   </div>
 </footer>
 
-<script type="module" src="./assets/app.9e371da050.js"></script>
+<script type="module" src="./assets/app.58c77a1376.js"></script>
 </body>
 </html>
