@@ -8,6 +8,8 @@
 /lib/*.js
   Cache-Control: public, max-age=86400
 
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
 /*.html
   Cache-Control: public, max-age=0, must-revalidate
-
