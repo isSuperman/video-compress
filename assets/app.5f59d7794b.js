@@ -460,9 +460,17 @@ $('start').addEventListener('keydown', e => {
   }
 });
 
-async function startConvert() {
-  if (!srcFile || !srcInfo || $('start').classList.contains('disabled')) return;
+// 压缩进行中的硬开关。
+// 以前这里只拦 disabled，busy 状态没拦——连点两次会并行跑两个 conversion，
+// 两个 onProgress 交替写进度条和百分比，界面上就出现重影/跳动的进度文本。
+let converting = false;
 
+async function startConvert() {
+  if (converting) return;                       // 已在压缩，忽略重复触发
+  if (!srcFile || !srcInfo) return;
+  if ($('start').classList.contains('disabled')) return;
+
+  converting = true;
   setBtnState('busy', '准备中');
   $('bar').style.width = '0%';
   $('status').className = 'status';
@@ -578,6 +586,7 @@ async function startConvert() {
     $('status').classList.remove('hide');
     $('status').textContent = '失败：' + (e && e.message ? e.message : String(e));
   } finally {
+    converting = false;
     // 失败时按钮要回到可点状态；成功时卡片已隐藏，无需处理
     const b = $('start');
     if (b.classList.contains('busy')) {
