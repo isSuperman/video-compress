@@ -14,6 +14,10 @@
 <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png">
 <link rel="mask-icon" href="./favicon.svg" color="#4f7cff">
 
+<!-- 编码库按需加载：预热连接 + 空闲时提前下载，两者都不阻塞首屏 -->
+<link rel="preconnect" href="https://video-compress-8uy.pages.dev" crossorigin>
+<link rel="prefetch" href="./lib/mediabunny.bundle.js" as="script">
+
 <!-- 添加到主屏幕：以独立应用方式启动，全屏无 Safari 界面 -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -749,10 +753,29 @@
   </div>
 </footer>
 
-<script src="./lib/mediabunny.bundle.js"></script>
 <script>
-const mb = window.Mediabunny;
 const $ = id => document.getElementById(id);
+
+/* ---------- 懒加载 mediabunny ---------- */
+// 这个包压缩后约 190KB，之前用同步 <script> 放在页面前面，会阻塞首屏渲染。
+// 现在改成用户选了视频（或即将压缩）时才注入，首屏只付 HTML+CSS 的成本。
+let mbPromise = null;
+function loadMB() {
+  if (window.Mediabunny) return Promise.resolve(window.Mediabunny);
+  if (!mbPromise) {
+    mbPromise = new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = './lib/mediabunny.bundle.js';
+      s.async = true;
+      s.onload = () => window.Mediabunny
+        ? resolve(window.Mediabunny)
+        : reject(new Error('MEDIABUNNY_MISSING'));
+      s.onerror = () => reject(new Error('MEDIABUNNY_LOAD_FAILED'));
+      document.head.appendChild(s);
+    }).catch(e => { mbPromise = null; throw e; });
+  }
+  return mbPromise;
+}
 
 let srcFile = null, srcInfo = null, lastBlob = null, lastName = '';
 let selRes = 1080, selQ = 4;
@@ -937,6 +960,10 @@ fileInput.addEventListener('change', e => {
   if (f) loadFile(f);
 });
 
+// 一点击选择区就开始预取编码库，等文件选完时通常已就绪（失败静默，loadFile 里会重试并报错）
+['pointerdown', 'focus'].forEach(t =>
+  fileInput.addEventListener(t, () => { loadMB().catch(() => {}); }, { once: true }));
+
 function fmtTime(s) {
   const m = Math.floor(s/60), sec = Math.floor(s%60);
   return `${m}:${String(sec).padStart(2,'0')}`;
@@ -968,6 +995,15 @@ async function loadFile(f) {
   }
 
   try {
+    // 首次选片时才拉取编码库（约 190KB 压缩后），并给出明确反馈
+    if (!window.Mediabunny) {
+      $('status').textContent = '正在加载编码引擎…';
+      $('status').className = 'status on';
+    }
+    const mb = await loadMB();
+    $('status').textContent = '';
+    $('status').className = 'status';
+
     const input = new mb.Input({
       formats: mb.ALL_FORMATS,
       source: new mb.BlobSource(f)
@@ -1031,8 +1067,14 @@ async function loadFile(f) {
     console.error(e);
     $('meta').textContent = '';
     showCard('infoCard');
-    $('srcWarn').textContent = '读取失败：' + e.message;
+    // 加载失败是网络问题，别让用户误以为是视频格式的锅
+    const code = String(e.message || '');
+    $('srcWarn').textContent =
+      code === 'MEDIABUNNY_LOAD_FAILED' || code === 'MEDIABUNNY_MISSING'
+        ? '编码引擎加载失败，请检查网络后重新选择视频。'
+        : '读取失败：' + e.message;
     $('drop').classList.remove('collapsed');
+    setBtnState('disabled');
   }
 }
 
@@ -1098,6 +1140,7 @@ async function startConvert() {
     const ratio = Math.max(0.3, (tw * th) / (1920 * 1080));
     const bitrate = Math.round(selQ * 1e6 * ratio);
 
+    const mb = await loadMB();
     const output = new mb.Output({
       format: new mb.Mp4OutputFormat(),
       target: new mb.BufferTarget()
