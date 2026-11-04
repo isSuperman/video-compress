@@ -107,7 +107,8 @@ def main():
     open(os.path.join(ROOT, boot_rel), 'w', encoding='utf-8').write(boot_body)
     js = js.replace(UI_MARK, '[]')
     # 页面先注入适配层（lg-boot），接线层由它在末尾自己按序加载
-    js = re.sub(r'/\*GLASS_BOOT\*/.*?/\*/GLASS_BOOT\*/', lambda m: repr('./' + boot_rel), js, flags=re.S)
+    js = re.sub(r'/\*GLASS_BOOT\*/[\s\S]*?/\*/GLASS_BOOT\*/',
+                lambda m: repr('./' + boot_rel), js)
     base = base.replace(GLASS_MARK, '')
 
     css_name = emit('style', css, 'css')

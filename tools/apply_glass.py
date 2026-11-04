@@ -19,8 +19,7 @@ def once(a, b, why):
 # 1. 预热连接
 once('<link rel="prefetch" href="./lib/mediabunny.bundle.js" as="script">',
      '<link rel="prefetch" href="./lib/mediabunny.bundle.js" as="script">\n\n'
-     '<!-- 液态玻璃：只预热连接；脚本在首屏 load 之后才注入（见 JS 里的 loadGlass） -->\n'
-     '<link rel="preconnect" href="https://glass.goose.cc.cd" crossorigin>', 'preconnect')
+     '<!-- 液态玻璃：库文件在本站 lib/ 下，页面 load 后才注入（见 JS 里的 loadGlass） -->', 'marker')
 
 # 2. 主题按钮 + 选择区外壳
 once('</header>\n\n<div class="drop" id="drop">',

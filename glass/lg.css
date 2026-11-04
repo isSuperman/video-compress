@@ -109,6 +109,9 @@
   -webkit-backdrop-filter: none;
 }
 .lg-on .actBtn::after { display: none; }
+/* 压缩进行中：把按钮的 pointer 事件断掉，连点不会有任何反应 */
+.lg-on .actBtn.busy { pointer-events: none; }
+
 .lg-on .actBtn .actLabel,
 .lg-on .actBtn .actPct {
   text-shadow: 0 1px 12px rgba(0, 0, 0, .55), 0 0 2px rgba(0, 0, 0, .35);
