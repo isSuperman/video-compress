@@ -418,6 +418,9 @@
       var(--act-bg);
     border-color:var(--act-border);
     cursor:default;
+    /* 压缩进行中不接受任何点击：防止连点启动第二个转换，
+       两个进度回调交替写进度条会让文本重叠 */
+    pointer-events:none;
   }
   /* 进行中：底部先铺一条淡轨道，进度线在其上推进 */
   .actBtn.busy::before{
