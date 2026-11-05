@@ -411,7 +411,9 @@
     border-radius:var(--r-lg);
     overflow:hidden;
     pointer-events:none;
-    background:transparent;
+    /* 垫一层跟随主题的底色：glass 的 WebGL canvas 是透明的，
+       壁纸异步加载完成前，先透出这里，避免首帧闪黑/闪白。 */
+    background:var(--bg);
   }
   /* 区域自身的底色交给玻璃层，避免两层叠在一起发灰 */
   .zone.drop,.zone.card{background:transparent;border-color:transparent;border-style:solid}

@@ -434,8 +434,28 @@ function paintGlass(layer, forceWp) {
   R.buttonConfigs = [panel];
   R.buttonStates = new Map([['bg', { pressed: false, pressProgress: 0, hoverProgress: 0, toggleProgress: 0 }]]);
   try { R.gooseRaster(panel); } catch (e) {}
+
+  // 消除首帧黑：canvas 是 alpha:false（不透明），壁纸 dataURL 又是异步加载，
+  // 在壁纸就绪前 canvas 是纯黑。这里先用主题底色做 backgroundColor 占位并
+  // 同步画一帧，随后壁纸就绪再清掉占位、让光晕壁纸上场。
+  const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const bg = dark ? [0x0b / 255, 0x0c / 255, 0x10 / 255] : [0xf5 / 255, 0xf6 / 255, 0xf8 / 255];
+  try { R.gooseBG(bg); } catch (e) {}
   R.needsRedraw = true;
   try { R.gooseRender(); } catch (e) {}
+
+  // 壁纸已通过上面的 setAttribute 触发 gooseLoadWP 异步加载。dataURL 加载极快，
+  // 下个宏任务里 wallpaperReady 通常已就绪，届时清掉 backgroundColor 占位色。
+  clearTimeout(layer.__bgTimer);
+  layer.__bgTimer = setTimeout(() => {
+    const rr = el._renderer;
+    if (rr && rr.wallpaperReady) {
+      try { rr.gooseBG(null); } catch (e) {}
+      rr.needsRedraw = true;
+      try { rr.gooseRender(); } catch (e) {}
+    }
+  }, 50);
+
   layer.w = w;
   layer.h = h;
 }
