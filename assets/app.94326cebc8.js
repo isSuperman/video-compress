@@ -406,6 +406,16 @@ function paintGlass(layer, forceWp) {
   const R = el._renderer;
   if (!R) return;
 
+  // 关键：禁用 mode 体系的 _rebuild。这个库的每个 mode（buttons/scroll-container
+  // 等）都会用 gooseBuild 生成一堆演示元素（默认按钮 / 卡片 / tab），并覆盖
+  // R.buttonConfigs。我们这里完全自己接管渲染（buttonConfigs = 单个玻璃 shape），
+  // 不需要 mode 体系。若不锁死，ResizeObserver 触发 _resize→_rebuild 时，
+  // 那些"多余按钮"就会冒出来。
+  if (!el.__lgLocked) {
+    el.__lgLocked = true;
+    el._rebuild = function () {}; // 空实现：不再让 mode 产物覆盖我们的玻璃
+  }
+
   // 壁纸：第一次画，或强制重画（滚动导致玻璃在视口里位置变了，光晕要对齐）
   if (forceWp || !layer.wp) {
     const wp = glassWallpaper(layer);
@@ -443,6 +453,15 @@ function initGlass() {
     if (!zone) return;
     const el = zone.querySelector(':scope > .glassBg');
     if (!el) return;
+
+    // 先锁死 mode 体系，再设 attribute：否则 setAttribute('mode') 会触发
+    // attributeChangedCallback→_rebuild 画出 mode 的默认按钮/卡片，
+    // 那些就是"初始化时纵向排列的多余控件"。
+    if (!el.__lgLocked) {
+      el.__lgLocked = true;
+      el._rebuild = function () {};
+    }
+
     el.setAttribute('mode', 'buttons');
     // dark 跟随系统：深色设 dark，浅色移除，让库按浅色渲染玻璃
     const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;

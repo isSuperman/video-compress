@@ -41,5 +41,5 @@ for _ in range(3):
 print('版本号:', short())
 PY
 
-git push "https://x-access-token:$GITHUB_TOKEN@github.com/isSuperman/video-compress.git" HEAD:main 2>&1 | tail -2
-echo "推送完成"
+git push "https://x-access-token:$GITHUB_TOKEN@github.com/isSuperman/video-compress.git" "HEAD:$BRANCH" 2>&1 | tail -2
+echo "推送完成 -> 分支 $BRANCH"
