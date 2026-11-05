@@ -2,7 +2,6 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<link rel="stylesheet" href="./assets/style.4c7f53a2d8.css">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#05060a" media="(prefers-color-scheme: dark)">
 <meta name="theme-color" content="#eef1f7" media="(prefers-color-scheme: light)">
@@ -26,9 +25,8 @@
 <meta name="apple-mobile-web-app-title" content="MC作业">
 <meta name="application-name" content="MC作业">
 <meta name="format-detection" content="telephone=no">
-<link rel="stylesheet" href="./assets/style.da3346d772.css">
 <link rel="stylesheet" href="./assets/style.4c7f53a2d8.css">
-<script src="./lib/liquid-glass.js"></script>
+</head>
 <body>
 
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -59,12 +57,15 @@
   <input type="file" id="file" accept="video/*">
 </div>
 
-<div class="glassGlass hide" id="srcGlass">
-  <div class="cap">源文件</div>
-  <liquid-glass id="srcCard" mode="scroll-container" class="lgCard"
-                style="height:248px;width:100%"></liquid-glass>
+<div class="card hide" id="infoCard">
+  <div class="label">源文件</div>
+  <div class="meta" id="meta"></div>
+  <div class="note" id="srcWarn"></div>
+
+  <div class="divider"></div>
+
+  <div class="note" id="codecWarn"></div>
 </div>
-<div class="hide" id="srcWarn"></div>
 
 <div class="card optOnly" id="optCard">
   <div class="optRow">
@@ -76,29 +77,45 @@
     </div>
   </div>
 
-  <liquid-glass id="qGlass" mode="single-slider" class="lgSlider"
-                style="height:48px"></liquid-glass>
-  <div class="slideMarks qMarks">
-    <span>小</span><span>标准</span><span>高</span>
+  <div class="optRow">
+    <span class="optKey">画质</span>
+    <div class="slideWrap">
+      <input type="range" id="qRange" min="0" max="2" step="1" value="1"
+             aria-label="画质档位">
+      <div class="slideMarks">
+        <span>小</span><span>标准</span><span>高</span>
+      </div>
+    </div>
+    <span class="qVal" id="qVal">4 Mbps</span>
   </div>
-  <div class="qNow" id="qVal">画质 4 Mbps</div>
 
-  <liquid-glass id="startGlass" mode="buttons" class="lgBtn"
-                style="height:64px"></liquid-glass>
+  <!-- 压缩按钮 + 进度：同一个容器内，进度沿按钮底边推进 -->
+  <div class="actBtn disabled" id="start" role="button" tabindex="0">
+    <div class="actFill" id="bar"></div>
+    <div class="actRow">
+      <span class="actLabel" id="actLabel">开始压缩</span>
+      <span class="actPct" id="actPct"></span>
+    </div>
+  </div>
+
+  <div class="optHint" id="optHint">先选择一个视频，再点「开始压缩」。</div>
+
   <div class="hide" id="status"></div>
 </div>
 
-<div class="card optOnly hide" id="optHintCard">
-  <div class="optHint" id="optHint">先选择一个视频，再点「开始压缩」。</div>
-</div>
-
-<div class="glassGlass hide" id="resGlass">
-  <div class="cap">压缩结果</div>
-  <liquid-glass id="resCard" mode="scroll-container" class="lgCard"
-                style="height:248px;width:100%"></liquid-glass>
-  <div class="resExtra hide" id="resExtra"></div>
-  <liquid-glass id="saveGlass" mode="buttons" class="lgBtn"
-                style="height:64px"></liquid-glass>
+<div class="card hide" id="resultCard">
+  <div class="label">压缩完成</div>
+  <div class="resTop">
+    <span class="saveTag" id="saveTag">已压缩</span>
+    <span class="resTime" id="rTime"></span>
+  </div>
+  <div class="row">
+    <div><b id="rOrig">—</b>原始</div>
+    <div class="new"><b id="rNew">—</b>压缩后</div>
+    <div><b id="rSave">—</b>节省</div>
+  </div>
+  <div class="spec" id="result"></div>
+  <button class="primary" id="download" style="margin-top:14px">保存到相册</button>
   <div class="save" id="saveHint"></div>
   <button class="linkBtn" id="again">
     <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -125,6 +142,6 @@
   </div>
 </footer>
 
-<script type="module" src="./assets/app.0e194c4242.js"></script>
+<script type="module" src="./assets/app.0e5438bd7c.js"></script>
 </body>
 </html>

@@ -245,114 +245,9 @@ function setBtnState(state, label) {
   }
 }
 
-
-// 画质三档：0-33 → 小，34-66 → 标准，67-100 → 高
-const Q_LEVELS = [
-  { q: 2, label: '2 Mbps' },
-  { q: 4, label: '4 Mbps' },
-  { q: 8, label: '8 Mbps' }
-];
-
-  // 壁纸：组件只折射「自己的壁纸」，所以要把页面背景（底色+光晕+网格）
-  // 画成一张图给它，并且跟随主题重画。
-  function makeWallpaper(light) {
-    const c = document.createElement('canvas');
-    c.width = 430; c.height = 900;
-    const x = c.getContext('2d');
-    x.fillStyle = light ? '#f5f6f8' : '#0b0c10';
-    x.fillRect(0, 0, c.width, c.height);
-    const glow = (cx, cy, r, rgb, a) => {
-      const g = x.createRadialGradient(cx, cy, 0, cx, cy, r);
-      g.addColorStop(0, `rgba(${rgb},${a})`);
-      g.addColorStop(1, `rgba(${rgb},0)`);
-      x.fillStyle = g;
-      x.fillRect(0, 0, c.width, c.height);
-    };
-    glow(c.width * 0.22, 40, 320, '63,216,255', light ? 0.30 : 0.20);
-    glow(c.width * 0.84, 120, 300, '157,107,255', light ? 0.24 : 0.18);
-    glow(c.width * 0.5, 330, 360, '79,124,255', light ? 0.16 : 0.11);
-    x.strokeStyle = light ? 'rgba(16,19,26,0.035)' : 'rgba(255,255,255,0.022)';
-    x.lineWidth = 1;
-    for (let gx = 0; gx < c.width; gx += 44) { x.beginPath(); x.moveTo(gx + .5, 0); x.lineTo(gx + .5, c.height); x.stroke(); }
-    for (let gy = 0; gy < c.height; gy += 44) { x.beginPath(); x.moveTo(0, gy + .5); x.lineTo(c.width, gy + .5); x.stroke(); }
-    return c.toDataURL('image/png');
-  }
-
-/* ---------- 玻璃组件 ---------- */
-// 页面上三处玻璃都是官方 <liquid-glass>：
-//   源文件 / 结果 → mode="scroll-container"（玻璃卡片，内容两行）
-//   开始压缩 / 保存 → mode="buttons"
-//   画质 → mode="single-slider"
-// 官方只暴露 setScroll / setButtons / setState 和 lg-statechange 事件，
-// 下面全部走这些接口，不碰组件内部。
-const LG = {
-  srcCard: $('srcCard'),
-  resCard: $('resCard'),
-  qGlass: $('qGlass'),
-  startGlass: $('startGlass'),
-  saveGlass: $('saveGlass'),
-
-  // 卡片只有「标题 + 副标题」两个字段，所以信息必须压成两行
-  setSrcCard(title, sub) {
-    this.srcCard.setScroll([{ title: title, subtitle: sub }]);
-  },
-  setResCard(title, sub) {
-    this.resCard.setScroll([{ title: title, subtitle: sub }]);
-  },
-  // 底部按钮组：title 用列表长度调整高度，所以直接给一个按钮
-  setStart(label, enabled) {
-    this.startGlass.setButtons([{
-      id: 'start', label: label || '开始压缩',
-      style: enabled ? 'blue' : 'transparent'
-    }]);
-    this.startGlass.style.pointerEvents = enabled ? '' : 'none';
-  },
-  setSave() {
-    this.saveGlass.setButtons([{ id: 'save', label: '保存到相册', style: 'blue' }]);
-  },
-  setSlider(v) {
-    this.qGlass.setState({ sliderValue: v });
-  }
-};
-
-// 主题跟随页面（系统深浅色）
-const mqDark = window.matchMedia('(prefers-color-scheme: dark)');
-let wpCache = {};
-function applyGlassTheme() {
-  const dark = mqDark.matches;
-  const key = dark ? 'dark' : 'light';
-  if (!wpCache[key]) wpCache[key] = makeWallpaper(!dark);
-  ['srcCard', 'resCard', 'qGlass', 'startGlass', 'saveGlass'].forEach(id => {
-    const el = $(id);
-    if (!el) return;
-    if (dark) el.setAttribute('dark', '');
-    else el.removeAttribute('dark');
-    el.setAttribute('wallpaper', wpCache[key]);
-  });
-}
-applyGlassTheme();
-if (mqDark.addEventListener) mqDark.addEventListener('change', applyGlassTheme);
-
-// 点击事件：所有玻璃组件的按钮都派发到 document
-document.addEventListener('lg-buttontap', e => {
-  const id = e.detail && e.detail.id;
-  if (id === 'start') startConvert();
-  else if (id === 'save') saveFile();
-});
-
-// 画质滑杆：0-100 → 0/50/100 三档（小 / 标准 / 高）
-document.addEventListener('lg-statechange', e => {
-  const v = e.detail && e.detail.sliderValue;
-  if (typeof v !== 'number') return;
-  const idx = v < 25 ? 0 : (v < 75 ? 1 : 2);
-  const lv = Q_LEVELS[idx] || Q_LEVELS[1];
-  selQ = lv.q;
-  $('qVal').textContent = '画质 ' + lv.label;
-});
-
 /* ---------- 参数卡默认态 ---------- */
 // 参数卡一进页面就显示（选择区下方），但没有源视频时不能压缩
-LG.setStart('开始压缩', false);
+setBtnState('disabled', '开始压缩');
 setHint(true);
 
 /* ---------- 环境检测 ---------- */
@@ -408,17 +303,17 @@ async function loadFile(f) {
   // 选中文件后收起选择区，避免占着屏幕第一屏
   $('drop').classList.add('collapsed');
   lastBlob = null;
-  hideCard('resGlass');
-  hideCard('srcGlass');
-  LG.setStart('开始压缩', false);
+  hideCard('resultCard');
+  setBtnState('disabled', '开始压缩');
   $('status').textContent = '';
   $('status').className = 'status';
-  $('status').classList.add('hide');
   $('srcWarn').textContent = '';
-  $('srcWarn').classList.remove('on');
+  $('codecWarn').textContent = '';
+  setBtnState('disabled');
 
   if (!HAS_WC) {
-    showGlass('srcGlass');
+    $('meta').textContent = '';
+    showCard('infoCard');
     $('srcWarn').textContent =
       '当前浏览器不支持 WebCodecs，无法进行硬件编码。请使用 Safari（iOS 16.4+）或其他新版浏览器打开。';
     $('drop').classList.remove('collapsed');
@@ -460,13 +355,13 @@ async function loadFile(f) {
     srcInfo.displayW = srcInfo.width;
     srcInfo.displayH = srcInfo.height;
 
-    // 官方卡片只有两行：文件名 / 规格一行
-    LG.setSrcCard(
-      f.name,
-      `${srcInfo.displayW}×${srcInfo.displayH} · ${fmtTime(srcInfo.duration)} · ${mbStr(f.size)}` +
-      (srcInfo.hasAudio ? '' : ' · 无音轨')
-    );
-    showGlass('srcGlass');
+    $('meta').innerHTML =
+      `<b>${f.name}</b><br>` +
+      `${srcInfo.displayW} × ${srcInfo.displayH} · ${fmtTime(srcInfo.duration)} · ${mbStr(f.size)}<br>` +
+      `编码 <b>${String(srcInfo.codec || '未知').toUpperCase()}</b>` +
+      (srcInfo.hasAudio ? ' · 含音轨' : ' · <b>无音轨</b>');
+
+    showCard('infoCard');
 
     if (!srcInfo.hasAudio) {
       $('srcWarn').textContent = '该视频没有音轨，压缩后的文件也不会有声音。';
@@ -486,12 +381,13 @@ async function loadFile(f) {
       return;
     }
 
-    LG.setStart('开始压缩', true);
+    setBtnState('idle', '开始压缩');
     setHint(false);
   } catch (e) {
     console.error(e);
     setHint(true);
-    showGlass('srcGlass');
+    $('meta').textContent = '';
+    showCard('infoCard');
     // 加载失败是网络问题，别让用户误以为是视频格式的锅
     const code = String(e.message || '');
     $('srcWarn').textContent =
@@ -499,7 +395,7 @@ async function loadFile(f) {
         ? '编码引擎加载失败，请检查网络后重新选择视频。'
         : '读取失败：' + e.message;
     $('drop').classList.remove('collapsed');
-    LG.setStart('开始压缩', false);
+    setBtnState('disabled');
   }
 }
 
@@ -511,8 +407,17 @@ $('resOpts').addEventListener('click', e => {
   b.classList.add('on'); selRes = +b.dataset.res;
 });
 
-// 画质：三档，滑杆 0-100 映射到小 / 标准 / 高
-// （Q_LEVELS 定义在文件靠前的玻璃接线处，这里只保留旧的事件解绑说明）
+// 画质：滑杆，0=小(2Mbps) 1=标准(4Mbps) 2=高(8Mbps)
+const Q_LEVELS = [
+  { q: 2, label: '2 Mbps' },
+  { q: 4, label: '4 Mbps' },
+  { q: 8, label: '8 Mbps' }
+];
+$('qRange').addEventListener('input', e => {
+  const lv = Q_LEVELS[+e.target.value] || Q_LEVELS[1];
+  selQ = lv.q;
+  $('qVal').textContent = lv.label;
+});
 
 /* ---------- 计算目标尺寸 ---------- */
 // displayW/H 已带旋转（竖屏是 1080×1920），但 mediabunny 的 width/height 参数
@@ -565,7 +470,7 @@ async function startConvert() {
   const myRun = ++runToken;
   const isCurrent = () => myRun === runToken;
   converting = true;
-  LG.setStart('准备中', false);
+  setBtnState('busy', '准备中');
   $('bar').style.width = '0%';
   $('status').className = 'status';
   $('status').textContent = '';
@@ -639,32 +544,43 @@ async function startConvert() {
     // 完成后整张源文件卡（含压缩按钮与输出设置）收起，只留结果卡
     $('status').textContent = '';
 
-    // 结果卡两行：节省比例 / 体积对比，其余信息放在卡片下方
-    LG.setResCard(
-      saved > 0 ? `已节省 ${saved}%` : '体积略有增加',
-      `${mbStr(srcFile.size)} → ${mbStr(lastBlob.size)} · ${tw}×${th} · 用时 ${elapsed.toFixed(1)} 秒`
-    );
-    LG.setSave();
-    const extra = $('resExtra');
-    extra.classList.remove('hide');
-    extra.textContent = `H.264 · ${(bitrate/1e6).toFixed(1)} Mbps · AAC 128k` +
-      (saved <= 0 ? '　原视频已高度压缩，再压体积反而变大，建议直接用原文件。' : '');
+    $('rOrig').textContent = mbStr(srcFile.size);
+    $('rNew').textContent = mbStr(lastBlob.size);
+    $('rSave').textContent = saved > 0 ? saved + '%' : '—';
+
+    const tag = $('saveTag');
+    if (saved > 0) {
+      tag.textContent = `节省 ${saved}%`;
+      tag.style.display = '';
+    } else {
+      tag.textContent = '体积略增';
+      tag.style.background = 'linear-gradient(96deg,#ffb340,#ff8a4c)';
+    }
+
+    $('result').innerHTML =
+      `H.264 · ${tw} × ${th} · ${(bitrate/1e6).toFixed(1)} Mbps · AAC 128k` +
+      (saved <= 0
+        ? '<br><b style="color:var(--warn)">原视频已高度压缩，再压体积反而变大，建议直接用原文件。</b>'
+        : '');
+
+    // 耗时放在成果栏
+    $('rTime').textContent = `用时 ${elapsed.toFixed(1)} 秒`;
     $('status').textContent = '';
 
     // 交接改为串行：先把源文件卡折叠收起，腾出空间后再展开结果卡。
     // 两件事同时做会让布局连跳两次，看起来生硬。
     // 注意：本环境 requestAnimationFrame 不触发，只能用定时器。
-    hideCard('srcGlass', true, () => {
-      showGlass('resGlass');
+    hideCard('infoCard', true, () => {
+      showCard('resultCard');
       setTimeout(() => {
         try {
-          $('resGlass').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          $('resultCard').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         } catch (e) {}
       }, 160);
     });
-    } catch (e) {
+  } catch (e) {
     console.error(e);
-    LG.setStart('重新压缩', true);
+    setBtnState('idle', '重新压缩');
     $('status').className = 'status';
     $('status').style.color = 'var(--err)';
     $('status').classList.remove('hide');
@@ -672,7 +588,10 @@ async function startConvert() {
   } finally {
     if (isCurrent()) converting = false;   // 旧任务结束时不要解除新任务的锁
     // 失败时按钮要回到可点状态；成功时卡片已隐藏，无需处理
-    if (!lastBlob) LG.setStart('开始压缩', true);
+    const b = $('start');
+    if (b.classList.contains('busy')) {
+      setBtnState('idle', '开始压缩');
+    }
   }
 }
 
@@ -722,12 +641,14 @@ $('download').addEventListener('click', saveFile);
 $('again').addEventListener('click', () => {
   srcFile = srcInfo = lastBlob = null;
   fileInput.value = '';
-  hideCard('srcGlass');
-  hideCard('resGlass');
+  hideCard('infoCard');
+  hideCard('resultCard');
   $('drop').classList.remove('collapsed');
-  LG.setStart('开始压缩', false);
+  setBtnState('disabled', '开始压缩');
   setHint(true);
   $('saveHint').textContent = '';
+  $('rTime').textContent = '';
   $('status').style.color = '';
+  $('saveTag').style.background = '';
   window.scrollTo({ top: 0, behavior: 'smooth' });
 });
