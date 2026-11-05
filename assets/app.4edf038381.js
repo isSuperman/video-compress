@@ -245,6 +245,145 @@ function setBtnState(state, label) {
   }
 }
 
+
+/* ---------- 玻璃背景层 ---------- */
+// 每个功能区底下垫一层官方 liquid-glass，只负责画玻璃外观；
+// 布局、内容、交互仍然是原来的 HTML。
+// 官方没有"纯背景"mode，所以用 buttons 模式的玻璃形状铺满区域实现。
+const GLASS_THEMES = {
+  panel: {
+    cornerRadius: 18,
+    refractionHeight: 20,
+    refractionAmount: -34,
+    depthEffect: true,
+    chromaticAberration: true,
+    blurRadius: 6,
+    saturation: 1.35,
+    brightness: 0,
+    contrast: 1,
+    tintColor: [0, 0, 0, 0],
+    surfaceColor: [0, 0, 0, 0],
+    highlight: { mode: 2, color: [1, 1, 1], angle: Math.PI / 4, falloff: 1, alpha: 0.30, widthDp: 0.5 },
+    outerShadow: null,
+    label: '',
+    labelColor: [0, 0, 0, 1],
+    showChevron: false,
+    isInteractive: false,
+    scroll: false,
+    useSeparableBlur: true
+  },
+  // 选择区：玻璃更透一点，像一块大玻璃板
+  drop: {
+    cornerRadius: 18,
+    refractionHeight: 24,
+    refractionAmount: -42,
+    depthEffect: true,
+    chromaticAberration: true,
+    blurRadius: 8,
+    saturation: 1.4,
+    brightness: 0,
+    contrast: 1,
+    tintColor: [0, 0, 0, 0],
+    surfaceColor: [0, 0, 0, 0],
+    highlight: { mode: 2, color: [1, 1, 1], angle: Math.PI / 4, falloff: 1, alpha: 0.26, widthDp: 0.5 },
+    outerShadow: null,
+    label: '',
+    labelColor: [0, 0, 0, 1],
+    showChevron: false,
+    isInteractive: false,
+    scroll: false,
+    useSeparableBlur: true
+  }
+};
+
+// 壁纸：玻璃只折射自己的壁纸，所以按页面背景实时画一张
+let glassWp = null;
+function glassWallpaper() {
+  if (glassWp) return glassWp;
+  const c = document.createElement('canvas');
+  c.width = 430; c.height = 900;
+  const x = c.getContext('2d');
+  x.fillStyle = '#0b0c10';
+  x.fillRect(0, 0, c.width, c.height);
+  const glow = (cx, cy, r, rgb, a) => {
+    const g = x.createRadialGradient(cx, cy, 0, cx, cy, r);
+    g.addColorStop(0, `rgba(${rgb},${a})`);
+    g.addColorStop(1, `rgba(${rgb},0)`);
+    x.fillStyle = g;
+    x.fillRect(0, 0, c.width, c.height);
+  };
+  glow(c.width * 0.22, 60, 340, '63,216,255', 0.22);
+  glow(c.width * 0.84, 150, 320, '157,107,255', 0.20);
+  glow(c.width * 0.5, 420, 380, '79,124,255', 0.12);
+  x.strokeStyle = 'rgba(255,255,255,0.022)';
+  x.lineWidth = 1;
+  for (let gx = 0; gx < c.width; gx += 44) { x.beginPath(); x.moveTo(gx + .5, 0); x.lineTo(gx + .5, c.height); x.stroke(); }
+  for (let gy = 0; gy < c.height; gy += 44) { x.beginPath(); x.moveTo(0, gy + .5); x.lineTo(c.width, gy + .5); x.stroke(); }
+  glassWp = c.toDataURL('image/png');
+  return glassWp;
+}
+
+const GLASS_LAYERS = [];
+
+// 给一个区域画玻璃。尺寸取区域实际布局尺寸，所以内容多高玻璃就多高。
+function paintGlass(layer) {
+  const el = layer.el;
+  const zone = layer.zone;
+  const w = zone.offsetWidth;
+  const h = zone.offsetHeight;
+  if (!w || !h) return;
+  el.style.height = h + 'px';
+  const R = el._renderer;
+  if (!R) return;
+  const t = GLASS_THEMES[layer.kind] || GLASS_THEMES.panel;
+  const panel = Object.assign({}, t, {
+    id: 'bg',
+    kind: 'glass-shape',
+    rect: { x: 0, y: 0, w: w, h: h }
+  });
+  R.buttonConfigs = [panel];
+  R.buttonStates = new Map([['bg', { pressed: false, pressProgress: 0, hoverProgress: 0, toggleProgress: 0 }]]);
+  try { R.gooseRaster(panel); } catch (e) {}
+  R.needsRedraw = true;
+  try { R.gooseRender(); } catch (e) {}
+  layer.w = w;
+  layer.h = h;
+}
+
+// 初始化所有玻璃层
+function initGlass() {
+  const targets = [
+    { zone: $('drop'), kind: 'drop' },
+    { zone: $('optCard'), kind: 'panel' },
+    { zone: $('infoCard'), kind: 'panel' },
+    { zone: $('resultCard'), kind: 'panel' }
+  ];
+  targets.forEach((t, i) => {
+    const zone = t.zone;
+    if (!zone) return;
+    const el = zone.querySelector(':scope > .glassBg');
+    if (!el) return;
+    el.setAttribute('mode', 'buttons');
+    el.setAttribute('dark', '');
+    el.setAttribute('wallpaper', glassWallpaper());
+    const layer = { el, zone, kind: t.kind, w: 0, h: 0 };
+    GLASS_LAYERS.push(layer);
+    // 错峰初始化，避免同时创建多个 WebGL 上下文卡住首帧
+    setTimeout(() => paintGlass(layer), 80 * i);
+  });
+}
+initGlass();
+
+// 内容变化后（选片、出结果、折叠）重新画玻璃
+function refreshGlass() {
+  GLASS_LAYERS.forEach(layer => {
+    const z = layer.zone;
+    if (z.classList.contains('hide')) return;
+    if (z.offsetWidth !== layer.w || z.offsetHeight !== layer.h) paintGlass(layer);
+  });
+}
+window.addEventListener('resize', refreshGlass);
+
 /* ---------- 参数卡默认态 ---------- */
 // 参数卡一进页面就显示（选择区下方），但没有源视频时不能压缩
 setBtnState('disabled', '开始压缩');

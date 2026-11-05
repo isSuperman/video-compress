@@ -64,56 +64,7 @@
   }
 
   /* ── 浅色模式 ── */
-  @media (prefers-color-scheme: light){
-    :root{
-      --bg:#f5f6f8;
-      --text:#10131a;
-      --dim:#5a6474;
-      --dimmer:#7b8496;
-      --surface:#ffffff;
-      --surface-2:#f1f3f6;
-      --line:rgba(16,19,26,.08);
-      --line-hi:rgba(60,120,220,.30);
-      --ok:#0aa96b;
-      --ok-soft:rgba(10,169,107,.10);
-      --warn:#b26a00;
-      --err:#d32f4a;
-      --blue-soft:rgba(79,124,255,.10);
-
-      --hair:rgba(16,19,26,.09);
-      --inset:rgba(16,19,26,.035);
-      --inset-2:rgba(16,19,26,.055);
-      --sunken:rgba(16,19,26,.06);
-      --card-hi:rgba(255,255,255,.95);
-      --card-lo:rgba(16,19,26,.04);
-      --shadow:rgba(30,45,80,.14);
-
-      --g1:rgba(63,180,255,.30);
-      --g2:rgba(157,107,255,.24);
-      --g3:rgba(79,124,255,.16);
-      --grid:rgba(16,19,26,.035);
-
-      --h1-a:#0b0d13; --h1-b:#1b3a6b; --h1-c:#2f7fd6; --h1-d:#6a4bd8;
-      --h1-glow:none;
-
-      /* 浅色下选择区必须够实，否则底纹透上来会很乱 */
-      --drop-bg:rgba(16,19,26,.015);
-      --drop-bg-active:rgba(16,19,26,.04);
-      --drop-border:rgba(16,19,26,.14);
-      --thumb-shadow:rgba(30,45,80,.18);
-      --btn-glow:rgba(79,124,255,.35);
-      --fill-glow:rgba(79,124,255,.22);
-      --fill-edge:rgba(255,255,255,.55);
-      --bar-inset:rgba(16,19,26,.08);
-      --chip-glow:rgba(79,124,255,.40);
-      --act-fill-grad:linear-gradient(135deg,#4f7cff,#6f5bff);
-      --act-fill-glow:rgba(74,114,240,.30);
-      --act-idle-bg:rgba(16,19,26,.05);
-      --act-idle-text:#98a0b0;
-      --thumb-ring:rgba(79,124,255,.70);
-      --thumb-halo:rgba(79,124,255,.12);
-    }
-  }
+  /* 深色为唯一主题：玻璃画布不透明，必须配深色底 */
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   /* 添加到主屏幕后按独立应用运行：禁用橡皮筋回弹与文字选中 */
   html{overscroll-behavior:none}
@@ -401,6 +352,24 @@
   /* 参数卡在选择区正下方时，间距略收紧，让两者成一个视觉组 */
   #drop + #optCard{margin-top:0}
   .optHint{font-size:12px;color:var(--dim);margin-top:11px;line-height:1.6}
+
+  /* ── 玻璃背景层 ──
+     每个功能区的版式完全不动，只在底下垫一层玻璃。
+     玻璃层铺满整个区域、不吃触摸，内容用 z-index 压在上面。 */
+  .zone{position:relative}
+  .zone > .glassBg{
+    position:absolute;inset:0;z-index:0;
+    border-radius:var(--r-lg);
+    overflow:hidden;
+    pointer-events:none;
+    background:transparent;
+  }
+  /* 区域自身的底色交给玻璃层，避免两层叠在一起发灰 */
+  .zone.drop,.zone.card{background:transparent;border-color:transparent;border-style:solid}
+  .zone > *:not(.glassBg){position:relative;z-index:1}
+  /* 选择区原本的虚线框改由玻璃描边表达 */
+  .zone.drop{border-style:solid;border-color:transparent}
+  .zone.drop:active{background:transparent}
 
   /* 折叠过渡：仅 JS 添加 .collapsing 时生效 */
   .card.collapsing{

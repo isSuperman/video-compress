@@ -25,7 +25,8 @@
 <meta name="apple-mobile-web-app-title" content="MC作业">
 <meta name="application-name" content="MC作业">
 <meta name="format-detection" content="telephone=no">
-<link rel="stylesheet" href="./assets/style.4c7f53a2d8.css">
+<link rel="stylesheet" href="./assets/style.5b2b10dda6.css">
+<script src="./lib/liquid-glass.js"></script>
 </head>
 <body>
 
@@ -45,7 +46,8 @@
   <div class="sub">本地硬件编码，文件不会上传到任何服务器</div>
 </header>
 
-<div class="drop" id="drop">
+<div class="drop zone" id="drop">
+  <liquid-glass class="glassBg" aria-hidden="true"></liquid-glass>
   <div class="ring">
     <svg viewBox="0 0 24 24">
       <rect x="2.5" y="6" width="13" height="12" rx="2.6"/>
@@ -57,7 +59,8 @@
   <input type="file" id="file" accept="video/*">
 </div>
 
-<div class="card hide" id="infoCard">
+<div class="card hide zone" id="infoCard">
+  <liquid-glass class="glassBg" aria-hidden="true"></liquid-glass>
   <div class="label">源文件</div>
   <div class="meta" id="meta"></div>
   <div class="note" id="srcWarn"></div>
@@ -67,7 +70,8 @@
   <div class="note" id="codecWarn"></div>
 </div>
 
-<div class="card optOnly" id="optCard">
+<div class="card optOnly zone" id="optCard">
+  <liquid-glass class="glassBg" aria-hidden="true"></liquid-glass>
   <div class="optRow">
     <span class="optKey">分辨率</span>
     <div class="chips" id="resOpts">
@@ -103,7 +107,8 @@
   <div class="hide" id="status"></div>
 </div>
 
-<div class="card hide" id="resultCard">
+<div class="card hide zone" id="resultCard">
+  <liquid-glass class="glassBg" aria-hidden="true"></liquid-glass>
   <div class="label">压缩完成</div>
   <div class="resTop">
     <span class="saveTag" id="saveTag">已压缩</span>
@@ -142,6 +147,6 @@
   </div>
 </footer>
 
-<script type="module" src="./assets/app.0e5438bd7c.js"></script>
+<script type="module" src="./assets/app.4edf038381.js"></script>
 </body>
 </html>
