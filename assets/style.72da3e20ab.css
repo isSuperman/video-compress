@@ -524,6 +524,12 @@
   .note:empty{display:none}
   .save{font-size:11.5px;color:var(--dimmer);text-align:center;margin-top:9px;line-height:1.6}
   .save:empty{display:none}
+  /* ── 参数卡（未选视频时也常驻在选择区下方）── */
+  .card.optOnly{padding-top:15px;padding-bottom:15px}
+  /* 参数卡在选择区正下方时，间距略收紧，让两者成一个视觉组 */
+  #drop + #optCard{margin-top:0}
+  .optHint{font-size:12px;color:var(--dim);margin-top:11px;line-height:1.6}
+
   /* 折叠过渡：仅 JS 添加 .collapsing 时生效 */
   .card.collapsing{
     transition: height .28s cubic-bezier(.4,0,.2,1),

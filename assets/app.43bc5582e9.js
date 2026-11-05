@@ -198,6 +198,12 @@ function hideCard(id, animate = true, onDone){
   setTimeout(tick, DUR / STEPS);
 }
 // 进度区不是 .card，单独显隐
+// 参数卡常驻页面：未选视频时按钮置灰并给一句引导，选中后隐藏这句话。
+function setHint(on) {
+  const h = $('optHint');
+  h.classList.toggle('hide', !on);
+}
+
 // 一体化按钮的三种状态：可用 / 进行中 / 不可用
 function setBtnState(state, label) {
   const b = $('start');
@@ -212,6 +218,11 @@ function setBtnState(state, label) {
     $('actPct').textContent = '';
   }
 }
+
+/* ---------- 参数卡默认态 ---------- */
+// 参数卡一进页面就显示（选择区下方），但没有源视频时不能压缩
+setBtnState('disabled', '开始压缩');
+setHint(true);
 
 /* ---------- 环境检测 ---------- */
 const HAS_WC = typeof VideoEncoder !== 'undefined' && typeof VideoDecoder !== 'undefined';
@@ -280,6 +291,7 @@ async function loadFile(f) {
     $('srcWarn').textContent =
       '当前浏览器不支持 WebCodecs，无法进行硬件编码。请使用 Safari（iOS 16.4+）或其他新版浏览器打开。';
     $('drop').classList.remove('collapsed');
+    setHint(true);
     return;
   }
 
@@ -344,8 +356,10 @@ async function loadFile(f) {
     }
 
     setBtnState('idle', '开始压缩');
+    setHint(false);
   } catch (e) {
     console.error(e);
+    setHint(true);
     $('meta').textContent = '';
     showCard('infoCard');
     // 加载失败是网络问题，别让用户误以为是视频格式的锅
@@ -604,6 +618,8 @@ $('again').addEventListener('click', () => {
   hideCard('infoCard');
   hideCard('resultCard');
   $('drop').classList.remove('collapsed');
+  setBtnState('disabled', '开始压缩');
+  setHint(true);
   $('saveHint').textContent = '';
   $('rTime').textContent = '';
   $('status').style.color = '';
