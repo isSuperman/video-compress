@@ -460,6 +460,10 @@ function initGlass() {
     if (!el.__lgLocked) {
       el.__lgLocked = true;
       el._rebuild = function () {};
+      // 同时锁掉 _maybeLoadGradient：它会在 wallpaper 为空时加载一个默认的
+      // 深蓝紫渐变背景，那正是"初始化时深色一闪而过"的来源。我们完全自己
+      // 控制壁纸（paintGlass 里生成光晕+网格喂进折射），不需要那个默认渐变。
+      el._maybeLoadGradient = function () {};
     }
 
     el.setAttribute('mode', 'buttons');
@@ -468,7 +472,8 @@ function initGlass() {
     if (dark) el.setAttribute('dark', ''); else el.removeAttribute('dark');
     const layer = { el, zone, kind: t.kind, w: 0, h: 0, wp: null };
     GLASS_LAYERS.push(layer);
-    // 错峰初始化，避免同时创建多个 WebGL 上下文卡住首帧
+    // 错峰初始化，避免同时创建多个 WebGL 上下文卡住首帧。
+    // _maybeLoadGradient 已被锁死，不会再有默认深色渐变闪出，所以错峰是安全的。
     setTimeout(() => paintGlass(layer, true), 80 * i);
   });
 }
