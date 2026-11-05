@@ -307,14 +307,25 @@ const GLASS_THEMES = {
 // 网格也严格对齐（44px 间距、从视口 0 点起算），而不是官方那种一张
 // 固定 430x900 的假图糊到所有玻璃上。
 //
-// 光晕/网格参数与 style.css 里 body::before/body::after 保持一致。
+// 底色/网格色/光晕颜色都读 CSS 变量（--bg / --grid / --g1~--g3），
+// 这样深浅主题自动跟随，而不是写死深色。光晕位置/尺寸与 body::before 一致。
+function getCssVar(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+// 解析 "rgba(63,216,255,.20)" 之类的颜色串 -> {r,g,b,a}（r/g/b 0..255，a 0..1）
+function parseRgba(str) {
+  const m = str.match(/rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)(?:\s*,\s*([\d.]+))?\s*\)/i);
+  if (!m) return null;
+  return { r: +m[1], g: +m[2], b: +m[3], a: m[4] !== undefined ? +m[4] : 1 };
+}
+
 function paintWallpaper(c, w, h, rect) {
   const x = c.getContext('2d');
   const vw = document.documentElement.clientWidth;
   const vh = window.innerHeight || document.documentElement.clientHeight;
 
-  // 底色
-  x.fillStyle = '#0b0c10';
+  // 底色：读 --bg（深色 #0b0c10 / 浅色 #f5f6f8）
+  x.fillStyle = getCssVar('--bg') || '#0b0c10';
   x.fillRect(0, 0, w, h);
 
   // body::before 的三团光晕：盒子 = inset:-20% -20% auto -20%，height 80vh。
@@ -322,13 +333,17 @@ function paintWallpaper(c, w, h, rect) {
   // 径向渐变的「尺寸 % / 中心位置 %」都是相对这个 body::before 盒子，
   // 不是相对视口。所以要先按这个盒子算光晕中心与半径，再换算到视口坐标，
   // 最后减去玻璃的视口偏移 rect.left/top 得到玻璃局部坐标。
+  // 颜色/透明度读 --g1/--g2/--g3（浅色模式会自动切到浅色光晕）。
   const boxX = -0.2 * vw, boxY = -0.2 * vh, boxW = 1.4 * vw, boxH = 0.8 * vh;
   const blobs = [
-    { px: 0.22, py: 0.08, rx: 0.48, ry: 0.42, rgb: '63,216,255', a: 0.20 },
-    { px: 0.84, py: 0.16, rx: 0.46, ry: 0.40, rgb: '157,107,255', a: 0.18 },
-    { px: 0.50, py: 0.46, rx: 0.60, ry: 0.44, rgb: '79,124,255', a: 0.11 }
+    { px: 0.22, py: 0.08, rx: 0.48, ry: 0.42, var: '--g1', fallback: '63,216,255', fbA: 0.20 },
+    { px: 0.84, py: 0.16, rx: 0.46, ry: 0.40, var: '--g2', fallback: '157,107,255', fbA: 0.18 },
+    { px: 0.50, py: 0.46, rx: 0.60, ry: 0.44, var: '--g3', fallback: '79,124,255', fbA: 0.11 }
   ];
   for (const b of blobs) {
+    let rgb = b.fallback, a = b.fbA;
+    const parsed = parseRgba(getCssVar(b.var));
+    if (parsed) { rgb = `${parsed.r},${parsed.g},${parsed.b}`; a = parsed.a; }
     // 光晕中心在 body::before 盒子里：(px*boxW, py*boxH)，换算到视口坐标再加 boxX/boxY。
     const cx = boxX + b.px * boxW - rect.left;
     const cy = boxY + b.py * boxH - rect.top;
@@ -341,17 +356,17 @@ function paintWallpaper(c, w, h, rect) {
     x.translate(cx, cy);
     x.scale(1, squash);
     const g = x.createRadialGradient(0, 0, 0, 0, 0, r);
-    g.addColorStop(0, `rgba(${b.rgb},${b.a})`);
-    g.addColorStop(0.68, `rgba(${b.rgb},0)`);
+    g.addColorStop(0, `rgba(${rgb},${a})`);
+    g.addColorStop(0.68, `rgba(${rgb},0)`);
     x.fillStyle = g;
     x.fillRect(-r, -r, r * 2, r * 2);
     x.restore();
   }
 
-  // body::after 的 44px 网格：grid 色最淡，从视口左上角 0 点起算，固定不滚动。
+  // body::after 的 44px 网格：读 --grid 色，从视口左上角 0 点起算，固定不滚动。
   // 玻璃在视口的偏移 = rect.left / rect.top，网格线相对玻璃的相位要据此平移，
   // 这样网格才能跟页面上一模一样地“穿过”玻璃而不错位。
-  x.strokeStyle = 'rgba(255,255,255,0.022)';
+  x.strokeStyle = getCssVar('--grid') || 'rgba(255,255,255,0.022)';
   x.lineWidth = 1;
   const gx0 = -(rect.left % 44);
   for (let gx = gx0; gx < w; gx += 44) {
@@ -429,7 +444,9 @@ function initGlass() {
     const el = zone.querySelector(':scope > .glassBg');
     if (!el) return;
     el.setAttribute('mode', 'buttons');
-    el.setAttribute('dark', '');
+    // dark 跟随系统：深色设 dark，浅色移除，让库按浅色渲染玻璃
+    const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    if (dark) el.setAttribute('dark', ''); else el.removeAttribute('dark');
     const layer = { el, zone, kind: t.kind, w: 0, h: 0, wp: null };
     GLASS_LAYERS.push(layer);
     // 错峰初始化，避免同时创建多个 WebGL 上下文卡住首帧
@@ -437,6 +454,32 @@ function initGlass() {
   });
 }
 initGlass();
+
+// 主题切换（系统深浅色变化）时，重设每块玻璃的 dark 属性并重画壁纸。
+// 壁纸颜色读的是 CSS 变量，浅色/深色切换后 getComputedStyle 会返回新值，
+// 所以强制重画就能让玻璃跟上主题。
+const darkMQ = window.matchMedia('(prefers-color-scheme: dark)');
+if (darkMQ.addEventListener) {
+  darkMQ.addEventListener('change', () => {
+    GLASS_LAYERS.forEach(layer => {
+      const el = layer.el;
+      if (darkMQ.matches) el.setAttribute('dark', '');
+      else el.removeAttribute('dark');
+      layer.wp = null; // 清缓存，强制重画壁纸用新主题颜色
+      paintGlass(layer, true);
+    });
+  });
+} else if (darkMQ.addListener) {
+  darkMQ.addListener(() => {
+    GLASS_LAYERS.forEach(layer => {
+      const el = layer.el;
+      if (darkMQ.matches) el.setAttribute('dark', '');
+      else el.removeAttribute('dark');
+      layer.wp = null;
+      paintGlass(layer, true);
+    });
+  });
+}
 
 // 内容变化后（选片、出结果、折叠）重新画玻璃
 function refreshGlass() {

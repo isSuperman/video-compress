@@ -64,7 +64,56 @@
   }
 
   /* ── 浅色模式 ── */
-  /* 深色为唯一主题：玻璃画布不透明，必须配深色底 */
+  @media (prefers-color-scheme: light){
+    :root{
+      --bg:#f5f6f8;
+      --text:#10131a;
+      --dim:#5a6474;
+      --dimmer:#7b8496;
+      --surface:#ffffff;
+      --surface-2:#f1f3f6;
+      --line:rgba(16,19,26,.08);
+      --line-hi:rgba(60,120,220,.30);
+      --ok:#0aa96b;
+      --ok-soft:rgba(10,169,107,.10);
+      --warn:#b26a00;
+      --err:#d32f4a;
+      --blue-soft:rgba(79,124,255,.10);
+
+      --hair:rgba(16,19,26,.09);
+      --inset:rgba(16,19,26,.035);
+      --inset-2:rgba(16,19,26,.055);
+      --sunken:rgba(16,19,26,.06);
+      --card-hi:rgba(255,255,255,.95);
+      --card-lo:rgba(16,19,26,.04);
+      --shadow:rgba(30,45,80,.14);
+
+      --g1:rgba(63,180,255,.30);
+      --g2:rgba(157,107,255,.24);
+      --g3:rgba(79,124,255,.16);
+      --grid:rgba(16,19,26,.035);
+
+      --h1-a:#0b0d13; --h1-b:#1b3a6b; --h1-c:#2f7fd6; --h1-d:#6a4bd8;
+      --h1-glow:none;
+
+      /* 浅色下选择区必须够实，否则底纹透上来会很乱 */
+      --drop-bg:rgba(16,19,26,.015);
+      --drop-bg-active:rgba(16,19,26,.04);
+      --drop-border:rgba(16,19,26,.14);
+      --thumb-shadow:rgba(30,45,80,.18);
+      --btn-glow:rgba(79,124,255,.35);
+      --fill-glow:rgba(79,124,255,.22);
+      --fill-edge:rgba(255,255,255,.55);
+      --bar-inset:rgba(16,19,26,.08);
+      --chip-glow:rgba(79,124,255,.40);
+      --act-fill-grad:linear-gradient(135deg,#4f7cff,#6f5bff);
+      --act-fill-glow:rgba(74,114,240,.30);
+      --act-idle-bg:rgba(16,19,26,.05);
+      --act-idle-text:#98a0b0;
+      --thumb-ring:rgba(79,124,255,.70);
+      --thumb-halo:rgba(79,124,255,.12);
+    }
+  }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   /* 添加到主屏幕后按独立应用运行：禁用橡皮筋回弹与文字选中 */
   html{overscroll-behavior:none}
