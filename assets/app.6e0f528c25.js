@@ -296,37 +296,92 @@ const GLASS_THEMES = {
   }
 };
 
-// 壁纸：玻璃只折射自己的壁纸，所以按页面背景实时画一张
-let glassWp = null;
-function glassWallpaper() {
-  if (glassWp) return glassWp;
-  const c = document.createElement('canvas');
-  c.width = 430; c.height = 900;
+// 壁纸：玻璃只折射自己的壁纸，所以得给每块玻璃画一张“它背后那个区域”的背景。
+//
+// 页面背景是 position:fixed 的（不随滚动），由三团径向光晕（body::before）
+// + 44px 网格（body::after）构成，都在视口坐标系里。所以一块玻璃折射到的
+// 背景，只取决于“这块玻璃此刻在视口里的位置”，跟 scrollY 无关。
+//
+// 这里按每块玻璃的 getBoundingClientRect()（视口坐标）精确重绘该区域的光晕
+// + 网格，喂给折射 shader。这样光晕会随玻璃在页面上滑动而“流过”玻璃，
+// 网格也严格对齐（44px 间距、从视口 0 点起算），而不是官方那种一张
+// 固定 430x900 的假图糊到所有玻璃上。
+//
+// 光晕/网格参数与 style.css 里 body::before/body::after 保持一致。
+function paintWallpaper(c, w, h, rect) {
   const x = c.getContext('2d');
+  const vw = document.documentElement.clientWidth;
+  const vh = window.innerHeight || document.documentElement.clientHeight;
+
+  // 底色
   x.fillStyle = '#0b0c10';
-  x.fillRect(0, 0, c.width, c.height);
-  const glow = (cx, cy, r, rgb, a) => {
-    const g = x.createRadialGradient(cx, cy, 0, cx, cy, r);
-    g.addColorStop(0, `rgba(${rgb},${a})`);
-    g.addColorStop(1, `rgba(${rgb},0)`);
+  x.fillRect(0, 0, w, h);
+
+  // body::before 的三团光晕：盒子 = inset:-20% -20% auto -20%，height 80vh。
+  // 即 left=-0.2vw, top=-0.2vh, 宽 1.4vw, 高 0.8vh。
+  // 径向渐变的「尺寸 % / 中心位置 %」都是相对这个 body::before 盒子，
+  // 不是相对视口。所以要先按这个盒子算光晕中心与半径，再换算到视口坐标，
+  // 最后减去玻璃的视口偏移 rect.left/top 得到玻璃局部坐标。
+  const boxX = -0.2 * vw, boxY = -0.2 * vh, boxW = 1.4 * vw, boxH = 0.8 * vh;
+  const blobs = [
+    { px: 0.22, py: 0.08, rx: 0.48, ry: 0.42, rgb: '63,216,255', a: 0.20 },
+    { px: 0.84, py: 0.16, rx: 0.46, ry: 0.40, rgb: '157,107,255', a: 0.18 },
+    { px: 0.50, py: 0.46, rx: 0.60, ry: 0.44, rgb: '79,124,255', a: 0.11 }
+  ];
+  for (const b of blobs) {
+    // 光晕中心在 body::before 盒子里：(px*boxW, py*boxH)，换算到视口坐标再加 boxX/boxY。
+    const cx = boxX + b.px * boxW - rect.left;
+    const cy = boxY + b.py * boxH - rect.top;
+    // 椭圆半径：rx*boxW（水平）、ry*boxH（垂直）。Canvas 的 radial gradient 是圆，
+    // 这里用等比缩放模拟椭圆：先按水平半径画，再给 y 方向乘 ry/rx 的压缩。
+    const r = b.rx * boxW;
+    if (r <= 0) continue;
+    const squash = (b.ry * boxH) / (b.rx * boxW) || 1;
+    x.save();
+    x.translate(cx, cy);
+    x.scale(1, squash);
+    const g = x.createRadialGradient(0, 0, 0, 0, 0, r);
+    g.addColorStop(0, `rgba(${b.rgb},${b.a})`);
+    g.addColorStop(0.68, `rgba(${b.rgb},0)`);
     x.fillStyle = g;
-    x.fillRect(0, 0, c.width, c.height);
-  };
-  glow(c.width * 0.22, 60, 340, '63,216,255', 0.22);
-  glow(c.width * 0.84, 150, 320, '157,107,255', 0.20);
-  glow(c.width * 0.5, 420, 380, '79,124,255', 0.12);
+    x.fillRect(-r, -r, r * 2, r * 2);
+    x.restore();
+  }
+
+  // body::after 的 44px 网格：grid 色最淡，从视口左上角 0 点起算，固定不滚动。
+  // 玻璃在视口的偏移 = rect.left / rect.top，网格线相对玻璃的相位要据此平移，
+  // 这样网格才能跟页面上一模一样地“穿过”玻璃而不错位。
   x.strokeStyle = 'rgba(255,255,255,0.022)';
   x.lineWidth = 1;
-  for (let gx = 0; gx < c.width; gx += 44) { x.beginPath(); x.moveTo(gx + .5, 0); x.lineTo(gx + .5, c.height); x.stroke(); }
-  for (let gy = 0; gy < c.height; gy += 44) { x.beginPath(); x.moveTo(0, gy + .5); x.lineTo(c.width, gy + .5); x.stroke(); }
-  glassWp = c.toDataURL('image/png');
-  return glassWp;
+  const gx0 = -(rect.left % 44);
+  for (let gx = gx0; gx < w; gx += 44) {
+    x.beginPath(); x.moveTo(gx + 0.5, 0); x.lineTo(gx + 0.5, h); x.stroke();
+  }
+  const gy0 = -(rect.top % 44);
+  for (let gy = gy0; gy < h; gy += 44) {
+    x.beginPath(); x.moveTo(0, gy + 0.5); x.lineTo(w, gy + 0.5); x.stroke();
+  }
+}
+
+// 给每块玻璃生成它专属的壁纸 dataURL（1:1 尺寸，保证 coverUv 精确对齐）。
+// 折射 shader 内部会再做提亮/调饱和/模糊，这里只需把光晕和网格铺准。
+function glassWallpaper(layer) {
+  const zone = layer.zone;
+  const rect = zone.getBoundingClientRect();
+  const w = zone.offsetWidth;
+  const h = zone.offsetHeight;
+  if (!w || !h) return null;
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  paintWallpaper(c, w, h, rect);
+  return c.toDataURL('image/png');
 }
 
 const GLASS_LAYERS = [];
 
 // 给一个区域画玻璃。尺寸取区域实际布局尺寸，所以内容多高玻璃就多高。
-function paintGlass(layer) {
+// 同时按区域当前视口位置重绘壁纸并喂给折射 shader。
+function paintGlass(layer, forceWp) {
   const el = layer.el;
   const zone = layer.zone;
   const w = zone.offsetWidth;
@@ -335,6 +390,16 @@ function paintGlass(layer) {
   el.style.height = h + 'px';
   const R = el._renderer;
   if (!R) return;
+
+  // 壁纸：第一次画，或强制重画（滚动导致玻璃在视口里位置变了，光晕要对齐）
+  if (forceWp || !layer.wp) {
+    const wp = glassWallpaper(layer);
+    if (wp) {
+      el.setAttribute('wallpaper', wp);
+      layer.wp = wp;
+    }
+  }
+
   const t = GLASS_THEMES[layer.kind] || GLASS_THEMES.panel;
   const panel = Object.assign({}, t, {
     id: 'bg',
@@ -365,11 +430,10 @@ function initGlass() {
     if (!el) return;
     el.setAttribute('mode', 'buttons');
     el.setAttribute('dark', '');
-    el.setAttribute('wallpaper', glassWallpaper());
-    const layer = { el, zone, kind: t.kind, w: 0, h: 0 };
+    const layer = { el, zone, kind: t.kind, w: 0, h: 0, wp: null };
     GLASS_LAYERS.push(layer);
     // 错峰初始化，避免同时创建多个 WebGL 上下文卡住首帧
-    setTimeout(() => paintGlass(layer), 80 * i);
+    setTimeout(() => paintGlass(layer, true), 80 * i);
   });
 }
 initGlass();
@@ -379,10 +443,23 @@ function refreshGlass() {
   GLASS_LAYERS.forEach(layer => {
     const z = layer.zone;
     if (z.classList.contains('hide')) return;
-    if (z.offsetWidth !== layer.w || z.offsetHeight !== layer.h) paintGlass(layer);
+    if (z.offsetWidth !== layer.w || z.offsetHeight !== layer.h) paintGlass(layer, true);
   });
 }
 window.addEventListener('resize', refreshGlass);
+
+// 背景是 fixed 的，光晕/网格固定在视口，玻璃随页面滑过它们。
+// 滚动时重画壁纸，让光晕真的“流进”玻璃而不错位。滚动结束才重画，避免每帧都画。
+let scrollTimer = null;
+window.addEventListener('scroll', () => {
+  clearTimeout(scrollTimer);
+  scrollTimer = setTimeout(() => {
+    GLASS_LAYERS.forEach(layer => {
+      if (layer.zone.classList.contains('hide')) return;
+      paintGlass(layer, true);
+    });
+  }, 80);
+}, { passive: true });
 
 /* ---------- 参数卡默认态 ---------- */
 // 参数卡一进页面就显示（选择区下方），但没有源视频时不能压缩
