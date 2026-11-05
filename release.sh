@@ -27,8 +27,8 @@ branch, now = sys.argv[1:3]
 def short():
     return subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD']).decode().strip()
 
-# version 字段只表示日期批次，真正的版本判断改为比对 index.html 里的 app 指纹；
-# 这里仍写一个含义明确的字符串：提交短哈希（可能落后一次 amend，不影响使用）。
+# 循环写入，直到写进去的短哈希与最终 HEAD 一致：
+# 每次写 version.json 都会改变内容 → amend 后 SHA 变化，所以要反复对齐。
 for _ in range(3):
     want = short()
     data = {"version": want, "branch": branch, "builtAt": now}

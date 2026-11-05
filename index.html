@@ -57,6 +57,16 @@
   <input type="file" id="file" accept="video/*">
 </div>
 
+<div class="card hide" id="infoCard">
+  <div class="label">源文件</div>
+  <div class="meta" id="meta"></div>
+  <div class="note" id="srcWarn"></div>
+
+  <div class="divider"></div>
+
+  <div class="note" id="codecWarn"></div>
+</div>
+
 <div class="card optOnly" id="optCard">
   <div class="optRow">
     <span class="optKey">分辨率</span>
@@ -91,16 +101,6 @@
   <div class="optHint" id="optHint">先选择一个视频，再点「开始压缩」。</div>
 
   <div class="hide" id="status"></div>
-</div>
-
-<div class="card hide" id="infoCard">
-  <div class="label">源文件</div>
-  <div class="meta" id="meta"></div>
-  <div class="note" id="srcWarn"></div>
-
-  <div class="divider"></div>
-
-  <div class="note" id="codecWarn"></div>
 </div>
 
 <div class="card hide" id="resultCard">
