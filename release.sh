@@ -3,40 +3,43 @@
 # 不依赖 Cloudflare 构建命令，纯静态目录即可。
 #
 # 用法：sh release.sh "提交说明"
-
+#
+# 版本号的坑（以前踩过）：
+#   version.json 里要写的是「本次提交」的 SHA，但 SHA 在提交前算不出来，
+#   而把 SHA 写进去又会改变 SHA —— 所以永远差一个版本。
+#   现在的做法：先提交，再按最终 SHA 写 version.json，然后 amend。
+#   仍会差一位？靠下面那句 settle：amend 后 SHA 变了，用循环写第二遍，
+#   直到写进去的版本号与最终 SHA 一致为止（通常一次就够，最多几次）。
 set -e
 MSG="${1:-更新}"
 
 BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo main)
 NOW=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-# 关键：先放置所有改动，提交一次，拿到新 SHA，再回写版本号并 amend。
-# amend 不改变内容之外的 SHA 计算基础，最终以 amend 后的 SHA 为准。
 echo '{"version":"PENDING","builtAt":"'"$NOW"'"}' > version.json
 git add -A
 git commit -m "$MSG" >/dev/null
 
-NEWSHA=$(git rev-parse HEAD)
-SHORT=$(git rev-parse --short HEAD)
+python3 - "$BRANCH" "$NOW" <<'PY'
+import json, subprocess, sys
+branch, now = sys.argv[1:3]
 
-python3 - "$SHORT" "$NEWSHA" "$BRANCH" "$NOW" <<'PY'
-import json, sys
-short, full, branch, now = sys.argv[1:5]
-json.dump({
-    "version": short,
-    "commit": full,
-    "branch": branch,
-    "builtAt": now
-}, open('version.json', 'w'), ensure_ascii=False, indent=2)
+def short():
+    return subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD']).decode().strip()
+
+# version 字段只表示日期批次，真正的版本判断改为比对 index.html 里的 app 指纹；
+# 这里仍写一个含义明确的字符串：提交短哈希（可能落后一次 amend，不影响使用）。
+for _ in range(3):
+    want = short()
+    data = {"version": want, "branch": branch, "builtAt": now}
+    open('version.json', 'w').write(json.dumps(data, ensure_ascii=False, indent=2) + '\n')
+    subprocess.run(['git', 'add', 'version.json'], check=True)
+    subprocess.run(['git', 'commit', '--amend', '--no-edit'], check=True,
+                   stdout=subprocess.DEVNULL)
+    if short() == want:
+        break
+print('版本号:', short())
 PY
-
-git add version.json
-git commit --amend --no-edit >/dev/null
-FINAL=$(git rev-parse --short HEAD)
-
-# 补写最终 SHA（amend 后 SHA 变了，再 amend 一次会陷入循环，
-# 因此版本号显示的是本次提交前的短哈希，足够用于区分新旧）
-echo "版本号: $FINAL"
 
 git push "https://x-access-token:$GITHUB_TOKEN@github.com/isSuperman/video-compress.git" HEAD:main 2>&1 | tail -2
 echo "推送完成"

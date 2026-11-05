@@ -93,13 +93,39 @@ const APP_VERSION = (() => {
     return `${p(d.getMonth() + 1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
   }
 
+  // 本页正在运行的脚本文件名（带内容指纹）。
+  // 光比版本号不够：服务端换了新 HTML，但浏览器缓存里还是旧脚本时，
+  // 版本号会显示成新的、行为却还是旧的。所以再比一次资源指纹。
+  const loadedJs = (() => {
+    const t = document.querySelector('script[type=module]');
+    if (t && t.src) {
+      const m = t.src.match(/app\.[0-9a-f]+\.js/);
+      if (m) return m[0];
+    }
+    // 本地调试时是内联 <script>，没有外链可比 → 退回只比版本号
+    return null;
+  })();
+
+  async function fetchIndexJs(bust) {
+    const r = await fetch('./index.html' + (bust ? '?t=' + Date.now() : ''), { cache: 'no-store' });
+    const html = await r.text();
+    // 已经被 split.py 拆过：脚本是外链文件
+    let m = html.match(/app\.[0-9a-f]+\.js/);
+    if (m) return m[0];
+    // 还是内联形态：直接取脚本正文比对
+    m = html.match(/<script>([\s\S]*?)<\/script>/);
+    return m ? m[1] : null;
+  }
+
   // 点击手动检查更新
   box.addEventListener('click', async () => {
     el.textContent = '检查中…';
     box.className = 'ver';
     try {
       const v = await fetchVersion(true);
-      if (current && v.version !== current.version) {
+      const remoteJs = await fetchIndexJs().catch(() => null);
+      const codeChanged = loadedJs && remoteJs && remoteJs !== loadedJs;
+      if ((current && v.version !== current.version) || codeChanged) {
         el.textContent = `有新版本 ${v.version} · 点击刷新`;
         box.className = 'ver stale';
         box.onclick = () => location.reload(true);
