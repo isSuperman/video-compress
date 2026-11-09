@@ -501,11 +501,16 @@ async function startConvert() {
         fit: 'contain',
         codec: 'avc',
         bitrate,
-        keyFrameInterval: 2,
+        // 关键帧间隔：I 帧体积是 P 帧的 5～10 倍，加密会显著拖慢编码。
+        // 压缩视频只用于播放、不用于剪辑，6 秒一个关键帧完全够用
+        // （可拖动进度条、可从任意位置播放）。原 2 秒过于保守。
+        keyFrameInterval: 6,
         // 关键：allowRotationMetadata 让 mediabunny 用旋转标记表达方向，
         // 而不是把像素转置。否则竖屏视频会被压成横屏或尺寸错乱。
-        allowRotationMetadata: true,
-        hardwareAcceleration: 'prefer-hardware'
+        allowRotationMetadata: true
+        // 不指定 hardwareAcceleration：之前写 'prefer-hardware'，一旦系统硬件
+        // 编码器不接受某组参数（尺寸/宽高比），WebKit 会静默回退到软件编码，
+        // 速度差一个数量级。交给系统自己挑最快的可行路径更稳。
       },
       audio: srcInfo.hasAudio
         ? { codec: 'aac', bitrate: 128000, numberOfChannels: 2, sampleRate: 48000 }
