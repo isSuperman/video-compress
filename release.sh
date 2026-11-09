@@ -1,45 +1,65 @@
 #!/bin/sh
-# 推送前生成 version.json 并随代码一起提交。
-# 不依赖 Cloudflare 构建命令，纯静态目录即可。
+# 生成 version.json 并提交；推送需要显式加 --push。
 #
-# 用法：sh release.sh "提交说明"
+# 用法：
+#   sh release.sh "提交说明"          # 只提交到本地
+#   sh release.sh "提交说明" --push   # 提交并推送 main
 #
-# 版本号的坑（以前踩过）：
-#   version.json 里要写的是「本次提交」的 SHA，但 SHA 在提交前算不出来，
-#   而把 SHA 写进去又会改变 SHA —— 所以永远差一个版本。
-#   现在的做法：先提交，再按最终 SHA 写 version.json，然后 amend。
-#   仍会差一位？靠下面那句 settle：amend 后 SHA 变了，用循环写第二遍，
-#   直到写进去的版本号与最终 SHA 一致为止（通常一次就够，最多几次）。
+# 版本号语义（重要，以前理解错了）：
+#   version.json 里的 version 记录的是「本次发布对应的功能提交」的短 SHA，
+#   不是 version.json 所在那条提交的 SHA。
+#
+#   原因：写 version.json 会改变提交内容 → 提交 SHA 变化 → 写进去的 SHA
+#   必然不等于自己所在提交的 SHA。旧版 release.sh 想用循环 amend 对齐，
+#   这在逻辑上不可能成功（每次 amend 都会重新生成 SHA），所以会白跑三轮。
+#
+#   这个语义对页脚足够：它的用途是「确认线上刷到了哪一版功能」。
 set -e
-MSG="${1:-更新}"
+
+PUSH=0
+MSG=""
+for a in "$@"; do
+  case "$a" in
+    --push) PUSH=1 ;;
+    *) MSG="$a" ;;
+  esac
+done
+[ -n "$MSG" ] || MSG="更新"
 
 BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo main)
 NOW=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-echo '{"version":"PENDING","builtAt":"'"$NOW"'"}' > version.json
-git add -A
-git commit -m "$MSG" >/dev/null
+# 有未提交改动 → 先正常提交，这条就是「功能提交」
+if ! git diff --cached --quiet || ! git diff --quiet; then
+  git add -A
+  git commit -m "$MSG" >/dev/null
+fi
 
-python3 - "$BRANCH" "$NOW" <<'PY'
-import json, subprocess, sys
-branch, now = sys.argv[1:3]
+# 取最新一条提交作为版本号（若上一步没提交，就是现有 HEAD）
+SHA=$(git rev-parse HEAD)
+SHORT=$(git rev-parse --short HEAD)
 
-def short():
-    return subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD']).decode().strip()
+printf '{\n  "version": "%s",\n  "commit": "%s",\n  "branch": "%s",\n  "builtAt": "%s"\n}\n' \
+  "$SHORT" "$SHA" "$BRANCH" "$NOW" > version.json
+echo "版本号: $SHORT ($BRANCH) @ $NOW"
 
-# 循环写入，直到写进去的短哈希与最终 HEAD 一致：
-# 每次写 version.json 都会改变内容 → amend 后 SHA 变化，所以要反复对齐。
-for _ in range(3):
-    want = short()
-    data = {"version": want, "branch": branch, "builtAt": now}
-    open('version.json', 'w').write(json.dumps(data, ensure_ascii=False, indent=2) + '\n')
-    subprocess.run(['git', 'add', 'version.json'], check=True)
-    subprocess.run(['git', 'commit', '--amend', '--no-edit'], check=True,
-                   stdout=subprocess.DEVNULL)
-    if short() == want:
-        break
-print('版本号:', short())
-PY
+# 版本文件单独提交（只在内容确实变化时）
+if ! git diff --quiet -- version.json; then
+  git add version.json
+  git commit -m "chore: 更新版本号为 $SHORT" >/dev/null
+  echo "已提交 version.json"
+fi
 
-git push "https://x-access-token:$GITHUB_TOKEN@github.com/isSuperman/video-compress.git" HEAD:main 2>&1 | tail -2
-echo "推送完成"
+if [ "$PUSH" -eq 1 ]; then
+  if [ -z "$GITHUB_TOKEN" ]; then
+    echo "错误：GITHUB_TOKEN 未设置，无法推送" >&2
+    exit 1
+  fi
+  # 用 http.extraheader 传凭据，token 不进 URL、不落 reflog
+  AUTH=$(printf 'x-access-token:%s' "$GITHUB_TOKEN" | base64 | tr -d '\n')
+  git -c http.extraheader="Authorization: Basic $AUTH" \
+      push "https://github.com/isSuperman/video-compress.git" "HEAD:$BRANCH" 2>&1 | tail -2
+  echo "推送完成 ($BRANCH)"
+else
+  echo "仅提交到本地。确认后加 --push 推送。"
+fi
